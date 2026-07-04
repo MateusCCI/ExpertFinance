@@ -181,16 +181,18 @@ function NewCardForm({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="new-brand">Bandeira</Label>
-        <Select value={brand} onValueChange={setBrand}>
-          <SelectTrigger id="new-brand"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Visa">Visa</SelectItem>
-            <SelectItem value="Mastercard">Mastercard</SelectItem>
-            <SelectItem value="Elo">Elo</SelectItem>
-            <SelectItem value="Amex">Amex</SelectItem>
-            <SelectItem value="Hipercard">Hipercard</SelectItem>
-          </SelectContent>
-        </Select>
+        <select
+          id="new-brand"
+          value={brand}
+          onChange={(e) => setBrand(e.target.value)}
+          className="flex w-full h-8 items-center rounded-md border px-3 py-1 text-sm outline-none"
+        >
+          <option value="Visa">Visa</option>
+          <option value="Mastercard">Mastercard</option>
+          <option value="Elo">Elo</option>
+          <option value="Amex">Amex</option>
+          <option value="Hipercard">Hipercard</option>
+        </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
