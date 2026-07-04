@@ -111,6 +111,7 @@ function NewCardForm({
   onSave,
   onCancel,
   editingCard,
+  physicalCards,
 }: {
   onSave: (data: {
     name: string;
@@ -124,9 +125,11 @@ function NewCardForm({
     status: string;
     color: string;
     spendTargetForWaiver: number;
+    virtuals: Array<{ name: string; lastDigits: string }>;
   }) => void;
   onCancel: () => void;
   editingCard?: CreditCardRow | null;
+  physicalCards: CreditCardRow[];
 }) {
   const [brand, setBrand] = useState(editingCard?.brand ?? "Visa");
   const [cardName, setCardName] = useState(editingCard?.name ?? "");
@@ -139,6 +142,7 @@ function NewCardForm({
   const [status, setStatus] = useState(editingCard?.status ?? "active");
   const [spendTarget, setSpendTarget] = useState(editingCard ? String(editingCard.spend_target_for_waiver ?? 0) : '0');
   const [cardColor, setCardColor] = useState(editingCard?.color ?? "#3b82f6");
+  const [virtuals, setVirtuals] = useState<Array<{ name: string; lastDigits: string }>>([]);
 
   const handleSave = () => {
     const limit = Number(totalLimit) || 0;
@@ -154,6 +158,7 @@ function NewCardForm({
       status,
       color: cardColor,
       spendTargetForWaiver: Number(spendTarget) || 0,
+      virtuals: virtuals.filter((v) => v.lastDigits.trim()),
     });
   };
 
@@ -227,6 +232,59 @@ function NewCardForm({
       <div className="space-y-1.5">
         <Label htmlFor="new-spend-target">Meta de gasto para isenção (R$/ano)</Label>
         <Input id="new-spend-target" type="number" value={spendTarget} onChange={(e) => setSpendTarget(e.target.value)} placeholder="0" />
+      </div>
+
+      {/* Cartoes virtuais */}
+      <div className="border-t border-border/40 pt-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm">Cartoes virtuais</Label>
+          <button
+            type="button"
+            onClick={() => setVirtuals([...virtuals, { name: "", lastDigits: "" }])}
+            className="text-xs text-primary hover:underline"
+          >
+            + Adicionar
+          </button>
+        </div>
+        {virtuals.length === 0 && (
+          <p className="text-xs text-muted-foreground">Nenhum cartao virtual. Clique em "+ Adicionar" para vincular.</p>
+        )}
+        {virtuals.map((v, i) => (
+          <div key={i} className="flex items-end gap-2">
+            <div className="flex-1 space-y-1">
+              <Input
+                value={v.name}
+                onChange={(e) => {
+                  const next = [...virtuals];
+                  next[i] = { ...next[i], name: e.target.value };
+                  setVirtuals(next);
+                }}
+                placeholder="Nome (ex: Apple Pay)"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="w-20 space-y-1">
+              <Input
+                value={v.lastDigits}
+                onChange={(e) => {
+                  const next = [...virtuals];
+                  next[i] = { ...next[i], lastDigits: e.target.value };
+                  setVirtuals(next);
+                }}
+                maxLength={4}
+                placeholder="0000"
+                className="h-8 text-xs"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setVirtuals(virtuals.filter((_, j) => j !== i))}
+              className="p-1.5 text-muted-foreground hover:text-red-500"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
       </div>
       {editingCard && (
         <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
@@ -609,6 +667,7 @@ export default function CreditCardsPage() {
     status: string;
     color: string;
     spendTargetForWaiver: number;
+    virtuals: Array<{ name: string; lastDigits: string }>;
   }) => {
     try {
       const accountId = accounts[0]?.id ?? "";
@@ -655,7 +714,28 @@ export default function CreditCardsPage() {
           color: data.color,
         });
 
-        toast("Cartão adicionado", { description: data.name });
+        // Criar cartoes virtuais vinculados
+        for (const v of data.virtuals) {
+          await createCard({
+            account_id: accountId,
+            name: v.name || `${data.name} (virtual)`,
+            brand: data.brand,
+            last_digits: v.lastDigits.padEnd(4, "0"),
+            total_limit: 0,
+            available_limit: 0,
+            closing_day: data.closingDay,
+            due_day: data.dueDay,
+            annual_fee: 0,
+            spend_target_for_waiver: null,
+            cashback_rate: 0,
+            cashback_balance: 0,
+            parent_card_id: newCard.id,
+            status: "active",
+            color: data.color,
+          });
+        }
+
+        toast("Cartao adicionado", { description: data.name + (data.virtuals.length > 0 ? ` + ${data.virtuals.length} virtual(is)` : "") });
       }
       setShowNewCard(false);
     } catch (err) {
@@ -1088,6 +1168,7 @@ export default function CreditCardsPage() {
           {editingCard && (
             <NewCardForm
               editingCard={editingCard}
+              physicalCards={physicalCards}
               onSave={handleSaveCard}
               onCancel={() => setEditingCardId(null)}
             />
@@ -1102,7 +1183,7 @@ export default function CreditCardsPage() {
             <DialogTitle>Novo cartão</DialogTitle>
             <DialogDescription>Adicione um novo cartão de crédito</DialogDescription>
           </DialogHeader>
-          <NewCardForm onSave={handleSaveCard} onCancel={() => setShowNewCard(false)} />
+          <NewCardForm physicalCards={physicalCards} onSave={handleSaveCard} onCancel={() => setShowNewCard(false)} />
         </DialogContent>
       </Dialog>
 
