@@ -253,7 +253,7 @@ function NewCardForm({
           <div key={i} className="flex items-end gap-2">
             <div className="w-20 space-y-1">
               <Input
-                value={v.lastDigits}
+                value={v}
                 onChange={(e) => {
                   const next = [...virtuals];
                   next[i] = e.target.value;
