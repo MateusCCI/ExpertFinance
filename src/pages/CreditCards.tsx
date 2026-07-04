@@ -671,7 +671,10 @@ export default function CreditCardsPage() {
           brand: data.brand,
           last_digits: data.lastDigits,
           total_limit: data.totalLimit,
-          available_limit: currentCard?.available_limit ?? data.totalLimit,
+          available_limit: Math.min(
+            data.totalLimit,
+            currentCard?.available_limit ?? data.totalLimit
+          ),
           closing_day: data.closingDay,
           due_day: data.dueDay,
           annual_fee: data.annualFee,

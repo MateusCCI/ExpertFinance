@@ -37,6 +37,7 @@ export function useCreditCards() {
       const { data, error } = await supabase
         .from("credit_cards")
         .select("*")
+        .neq("status", "cancelled")
         .order("name");
 
       if (error) console.error("Error fetching credit cards:", error);
@@ -73,12 +74,51 @@ export function useCreditCards() {
   };
 
   const deleteCard = async (id: string) => {
-    const { error } = await supabase
-      .from("credit_cards")
-      .update({ status: "cancelled", updated_at: new Date().toISOString() })
-      .eq("id", id);
+    // 1. Desvincular transações
+    const txResult = await supabase
+      .from("transactions")
+      .update({ credit_card_id: null, updated_at: new Date().toISOString() })
+      .eq("credit_card_id", id)
+      .select("id");
+    console.log("[deleteCard] transactions unlink:", txResult.data?.length ?? 0, "rows", txResult.error?.message ?? "ok");
 
-    if (error) throw error;
+    // 2. Excluir faturas
+    const invResult = await supabase
+      .from("invoices")
+      .delete()
+      .eq("credit_card_id", id)
+      .select("id");
+    console.log("[deleteCard] invoices delete:", invResult.data?.length ?? 0, "rows", invResult.error?.message ?? "ok");
+
+    // 3. Excluir virtuais filhos
+    const virtResult = await supabase
+      .from("credit_cards")
+      .delete()
+      .eq("parent_card_id", id)
+      .select("id");
+    console.log("[deleteCard] virtuals delete:", virtResult.data?.length ?? 0, "rows", virtResult.error?.message ?? "ok");
+
+    // 4. Tentar hard delete
+    const delResult = await supabase
+      .from("credit_cards")
+      .delete()
+      .eq("id", id)
+      .select("id");
+    console.log("[deleteCard] card hard delete:", delResult.data?.length ?? 0, "rows", delResult.error?.message ?? "ok");
+
+    if (delResult.error || !delResult.data || delResult.data.length === 0) {
+      console.log("[deleteCard] hard delete falhou, tentando soft delete...");
+      const softResult = await supabase
+        .from("credit_cards")
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select("id");
+      console.log("[deleteCard] soft delete:", softResult.data?.length ?? 0, "rows", softResult.error?.message ?? "ok");
+      if (softResult.error || !softResult.data || softResult.data.length === 0) {
+        throw new Error("Nenhuma operação foi executada. Verifique as políticas RLS no Supabase.");
+      }
+    }
+
     setCards((prev) => prev.filter((c) => c.id !== id));
   };
 
