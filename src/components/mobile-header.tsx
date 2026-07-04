@@ -31,14 +31,14 @@ export function MobileHeader({
   const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
-    setPendingCount(getPendingCount())
+    getPendingCount().then(setPendingCount)
   }, [])
 
   useEffect(() => {
     if (isOnline && pendingCount > 0 && !syncing) {
       setSyncing(true)
       flushQueue().then((synced) => {
-        setPendingCount(getPendingCount())
+        getPendingCount().then(setPendingCount)
         setSyncing(false)
       }).catch(() => setSyncing(false))
     }

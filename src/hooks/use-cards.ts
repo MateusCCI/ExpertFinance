@@ -21,6 +21,7 @@ export interface CreditCard {
   cashback_balance: number;
   parent_card_id: string | null;
   status: "active" | "blocked" | "cancelled";
+  color: string | null;
   sync_status: "synced" | "pending" | "conflict";
   created_at: string;
   updated_at: string;
