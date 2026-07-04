@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { clearKeyCache } from "@/lib/crypto";
 import type { User } from "@supabase/supabase-js";
 
 export function useAuth() {
@@ -7,7 +8,17 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleAuth = async () => {
+    let cancelled = false;
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (cancelled) return;
+        setUser(session?.user ?? null);
+        setLoading(false);
+      },
+    );
+
+    const exchangeCode = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
@@ -22,21 +33,19 @@ export function useAuth() {
         window.history.replaceState({}, "", url.pathname);
       }
 
-      const { data: listener } = supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          setUser(session?.user ?? null);
-          setLoading(false);
-        },
-      );
-
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      return () => listener?.subscription.unsubscribe();
+      if (!cancelled) {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
     };
 
-    handleAuth();
+    exchangeCode();
+
+    return () => {
+      cancelled = true;
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
   return {
@@ -57,6 +66,7 @@ export function useAuth() {
       if (error) throw error;
     },
     signOut: async () => {
+      clearKeyCache();
       await supabase.auth.signOut();
     },
   };

@@ -588,7 +588,7 @@ export default function Dashboard() {
               <h3 className="text-xs md:text-sm font-medium text-foreground mb-3 md:mb-4 flex items-center gap-1.5 md:gap-2"><PiggyBank className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" /> Ativos</h3>
               <div className="space-y-2 md:space-y-3">
                 {accounts.map((acc) => {
-                  const pct = (acc.balance / totalAssets) * 100;
+                  const pct = totalAssets !== 0 ? (acc.balance / totalAssets) * 100 : 0;
                   const typeLabel = acc.type === "cash" ? "Dinheiro" : acc.type === "checking" ? "Conta Corrente" : acc.type === "investment" ? "Investimento" : acc.type;
                   return (
                     <div key={acc.name}>
@@ -620,7 +620,7 @@ export default function Dashboard() {
                   <div key={`${inv.credit_card_id}-${inv.month}-${inv.year}`} className="flex items-start gap-3 p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30">
                     <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">Fatura {getCardName(inv.credit_card_id)} — {monthNames[inv.month - 1]}/{inv.year}</p>
+                      <p className="text-xs font-medium text-foreground">Fatura {getCardName(inv.credit_card_id)} — {monthNames[inv.month - 1] ?? "???"}/{inv.year}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">R$ {(inv.total_amount - inv.paid_amount).toFixed(2)} restante • Vence {inv.due_date}</p>
                     </div>
                   </div>

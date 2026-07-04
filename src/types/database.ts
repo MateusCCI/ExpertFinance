@@ -63,6 +63,7 @@ export interface CreditCard {
   cashback_balance: number;
   parent_card_id: string | null;
   status: CardStatus;
+  color: string | null;
   sync_status: SyncStatus;
   created_at: string;
   updated_at: string;

@@ -28,7 +28,7 @@ export function ThemeSwitcher({ onThemeChange }: ThemeSwitcherProps) {
         <span className="text-muted-foreground">Tema</span>
         <div
           className="w-4 h-4 rounded-full border-2 border-border"
-          style={{ backgroundColor: themes.find((t) => t.id === selectedId)?.primary }}
+          style={{ backgroundColor: themes.find((t) => t.id === selectedId)?.colors["--primary"] }}
         />
       </button>
 
@@ -59,11 +59,11 @@ export function ThemeSwitcher({ onThemeChange }: ThemeSwitcherProps) {
                   <div className="flex gap-1">
                     <div
                       className="w-5 h-5 rounded-full border border-border/40"
-                      style={{ backgroundColor: theme.primary }}
+                      style={{ backgroundColor: theme.colors["--primary"] }}
                     />
                     <div
                       className="w-5 h-5 rounded-full border border-border/40"
-                      style={{ backgroundColor: theme.accent }}
+                      style={{ backgroundColor: theme.colors["--accent"] }}
                     />
                   </div>
                   <div className="flex-1 text-left">

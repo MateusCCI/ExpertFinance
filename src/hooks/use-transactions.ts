@@ -59,9 +59,10 @@ export function useTransactions(accountId?: string) {
   const createTransaction = async (tx: Omit<Transaction, "id" | "user_id" | "created_at" | "updated_at" | "sync_status">) => {
     await ensureProfile();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autenticado");
     const { data, error } = await supabase
       .from("transactions")
-      .insert({ ...tx, user_id: user?.id ?? "", sync_status: "synced" })
+      .insert({ ...tx, user_id: user.id, sync_status: "synced" })
       .select()
       .single();
 
@@ -93,18 +94,22 @@ export function useTransactions(accountId?: string) {
 
     // Restaurar limite do cartão se for despesa
     if (tx?.credit_card_id && tx.type === "expense") {
-      const physicalId = await getPhysicalCardId(tx.credit_card_id);
-      const { data: card } = await supabase
-        .from("credit_cards")
-        .select("available_limit")
-        .eq("id", physicalId)
-        .single();
-
-      if (card) {
-        await supabase
+      try {
+        const physicalId = await getPhysicalCardId(tx.credit_card_id);
+        const { data: card } = await supabase
           .from("credit_cards")
-          .update({ available_limit: card.available_limit + tx.amount, updated_at: new Date().toISOString() })
-          .eq("id", physicalId);
+          .select("available_limit")
+          .eq("id", physicalId)
+          .maybeSingle();
+
+        if (card) {
+          await supabase
+            .from("credit_cards")
+            .update({ available_limit: card.available_limit + tx.amount, updated_at: new Date().toISOString() })
+            .eq("id", physicalId);
+        }
+      } catch {
+        // Cartão pode ter sido deletado — limite não restaurado
       }
     }
 

@@ -9,7 +9,7 @@ export async function getPhysicalCardId(cardId: string): Promise<string> {
     .from("credit_cards")
     .select("parent_card_id")
     .eq("id", cardId)
-    .single();
+    .maybeSingle();
 
   return data?.parent_card_id || cardId;
 }

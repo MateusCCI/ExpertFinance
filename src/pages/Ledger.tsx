@@ -176,6 +176,7 @@ export default function LedgerPage() {
   const [showCardDropdown, setShowCardDropdown] = useState(false);
   const [editTxn, setEditTxn] = useState<{ personId: string; txn: TransactionRecord } | null>(null);
   const [deleteTxn, setDeleteTxn] = useState<{ personId: string; txn: TransactionRecord } | null>(null);
+  const [saving, setSaving] = useState(false);
   const txnAccountRef = useRef<HTMLDivElement>(null);
   const txnCardRef = useRef<HTMLDivElement>(null);
   const settleAccountRef = useRef<HTMLDivElement>(null);
@@ -282,7 +283,9 @@ export default function LedgerPage() {
   function handleRecordTxn() {
     if (!selectedPerson || !txnAmount) return;
     if (!txnAccountId && !txnCardId) return;
+    if (saving) return;
     const amount = parseFloat(txnAmount);
+    setSaving(true);
 
     createTransaction({
       person_id: selectedPerson._id,
@@ -356,14 +359,18 @@ export default function LedgerPage() {
       setTxnAccountId("");
       setTxnCardId("");
       setShowRecordTxn(false);
+      setSaving(false);
     }).catch(() => {
       toast.error("Erro ao registrar transação");
+      setSaving(false);
     });
   }
 
   function handleSettlePix() {
     if (!selectedPerson || !settleAccountId) return;
+    if (saving) return;
     const amount = Math.abs(selectedPerson.balance);
+    setSaving(true);
 
     createTransaction({
       person_id: selectedPerson._id,
@@ -375,14 +382,18 @@ export default function LedgerPage() {
       toast("Liquidado via PIX", { description: `R$ ${amount.toFixed(2)} — ${selectedPerson.personName}` });
       setSettleAccountId("");
       setShowSettlePix(false);
+      setSaving(false);
     }).catch(() => {
       toast.error("Erro ao liquidar via PIX");
+      setSaving(false);
     });
   }
 
   function handleSettleCard() {
     if (!selectedPerson || !settleCardId) return;
+    if (saving) return;
     const amount = Math.abs(selectedPerson.balance);
+    setSaving(true);
 
     createTransaction({
       person_id: selectedPerson._id,
@@ -449,8 +460,10 @@ export default function LedgerPage() {
       });
       setSettleCardId("");
       setShowSettleCard(false);
+      setSaving(false);
     }).catch(() => {
       toast.error("Erro ao passar no cartão");
+      setSaving(false);
     });
   }
 

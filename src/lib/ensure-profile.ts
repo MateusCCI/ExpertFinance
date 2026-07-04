@@ -17,7 +17,7 @@ export async function ensureProfile() {
   if (!data) {
     await supabase
       .from("profiles")
-      .insert({ id: user.id, name: user.email?.split("@")[0] ?? "Usuário", email: user.email });
+      .upsert({ id: user.id, name: user.email?.split("@")[0] ?? "Usuário", email: user.email }, { onConflict: "id" });
   }
 
   profileEnsured = true;

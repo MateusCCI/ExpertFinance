@@ -49,9 +49,10 @@ export function useCreditCards() {
   const createCard = async (card: Omit<CreditCard, "id" | "user_id" | "created_at" | "updated_at" | "sync_status">) => {
     await ensureProfile();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autenticado");
     const { data, error } = await supabase
       .from("credit_cards")
-      .insert({ ...card, user_id: user?.id ?? "", sync_status: "synced" })
+      .insert({ ...card, user_id: user.id, sync_status: "synced" })
       .select()
       .single();
 
@@ -83,25 +84,35 @@ export function useCreditCards() {
   const updateCardLimit = async (id: string, delta: number) => {
     const physicalId = await getPhysicalCardId(id);
 
+    // Try atomic RPC first (prevents race conditions)
+    const { data: newLimit, error: rpcError } = await supabase
+      .rpc("update_card_limit_atomic", { p_card_id: physicalId, p_delta: delta });
+
+    if (!rpcError && newLimit !== null) {
+      setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: newLimit } : c)));
+      return;
+    }
+
+    // Fallback to read-then-write if RPC not available
     const { data: current, error: fetchError } = await supabase
       .from("credit_cards")
       .select("available_limit, total_limit")
       .eq("id", physicalId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError) throw fetchError;
+    if (fetchError || !current) throw fetchError ?? new Error("Cartão não encontrado");
 
-    const currentLimit = current?.available_limit ?? 0;
-    const newLimit = Math.max(0, currentLimit + delta);
+    const currentLimit = current.available_limit ?? 0;
+    const updatedLimit = Math.max(0, Math.min(current.total_limit, currentLimit + delta));
 
     const { error } = await supabase
       .from("credit_cards")
-      .update({ available_limit: newLimit, updated_at: new Date().toISOString() })
+      .update({ available_limit: updatedLimit, updated_at: new Date().toISOString() })
       .eq("id", physicalId);
 
     if (error) throw error;
 
-    setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: newLimit } : c)));
+    setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: updatedLimit } : c)));
   };
 
   return { cards, loading, createCard, updateCard, deleteCard, updateCardLimit };

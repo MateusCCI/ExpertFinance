@@ -127,7 +127,6 @@ function NewCardForm({
   }) => void;
   onCancel: () => void;
   editingCard?: CreditCardRow | null;
-  allCards: CreditCardRow[];
 }) {
   const [brand, setBrand] = useState(editingCard?.brand ?? "Visa");
   const [cardName, setCardName] = useState(editingCard?.name ?? "");
@@ -968,16 +967,16 @@ export default function CreditCardsPage() {
 
                         {isExpanded && (
                           <div className="border-t border-border/40 bg-muted/20">
-                            {allTransactions.filter((t) => getCardTransactionIds(card.id).includes(t.credit_card_id)).length === 0 ? (
+                            {allTransactions.filter((t) => t.credit_card_id && getCardTransactionIds(card.id).includes(t.credit_card_id)).length === 0 ? (
                               <p className="text-xs text-muted-foreground text-center py-6">Nenhuma compra registrada</p>
                             ) : (
-                              allTransactions.filter((t) => getCardTransactionIds(card.id).includes(t.credit_card_id)).slice(0, 10).map((tx) => (
+                              allTransactions.filter((t) => t.credit_card_id && getCardTransactionIds(card.id).includes(t.credit_card_id)).slice(0, 10).map((tx) => (
                                 <div key={tx.id} className="px-4 md:px-5 py-3 border-b border-border/30 last:border-0 flex items-center justify-between">
                                   <div className="min-w-0">
                                     <p className="text-xs font-medium text-foreground truncate">{tx.description}</p>
                                     <p className="text-[10px] text-muted-foreground">
                                       {new Date(tx.date).toLocaleDateString("pt-BR")}
-                                      {tx.credit_card_id !== card.id && ` • •••${cardDigitsMap.get(tx.credit_card_id) || ""}`}
+                                      {tx.credit_card_id !== card.id && ` • •••${cardDigitsMap.get(tx.credit_card_id || "") || ""}`}
                                     </p>
                                   </div>
                                   <span className={`text-xs font-medium tabular-nums shrink-0 ml-3 ${tx.type === "expense" ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
@@ -1001,7 +1000,7 @@ export default function CreditCardsPage() {
                   ) : (
                     physicalCards.map((card, i) => {
                       const cardIds = getCardTransactionIds(card.id);
-                      const cardTransactions = allTransactions.filter((t) => cardIds.includes(t.credit_card_id));
+                      const cardTransactions = allTransactions.filter((t) => t.credit_card_id && cardIds.includes(t.credit_card_id));
                       const totalSpent = cardTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
                       const totalReceived = cardTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
                       const isExpanded = expandedCard === card.id;

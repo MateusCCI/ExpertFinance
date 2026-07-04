@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { encrypt, decrypt, clearKeyCache } from "./crypto";
 
 const QUEUE_KEY = "offline-sync-queue";
 
@@ -13,31 +14,61 @@ export interface SyncItem {
   retries: number;
 }
 
-function getQueue(): SyncItem[] {
+async function getSessionToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+async function getQueue(): Promise<SyncItem[]> {
   try {
-    return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+    const raw = localStorage.getItem(QUEUE_KEY);
+    if (!raw) return [];
+
+    const token = await getSessionToken();
+    if (!token) return JSON.parse(raw || "[]");
+
+    // Try decrypting; fall back to plaintext if not encrypted
+    try {
+      const decrypted = await decrypt(raw, token);
+      return JSON.parse(decrypted);
+    } catch {
+      return JSON.parse(raw);
+    }
   } catch {
     return [];
   }
 }
 
-function saveQueue(queue: SyncItem[]) {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+async function saveQueue(queue: SyncItem[]): Promise<void> {
+  const json = JSON.stringify(queue);
+  const token = await getSessionToken();
+
+  if (token) {
+    try {
+      const encrypted = await encrypt(json, token);
+      localStorage.setItem(QUEUE_KEY, encrypted);
+      return;
+    } catch {
+      // Fall through to plaintext
+    }
+  }
+
+  localStorage.setItem(QUEUE_KEY, json);
 }
 
-export function enqueue(item: Omit<SyncItem, "id" | "createdAt" | "retries">) {
-  const queue = getQueue();
+export async function enqueue(item: Omit<SyncItem, "id" | "createdAt" | "retries">): Promise<void> {
+  const queue = await getQueue();
   queue.push({
     ...item,
     id: crypto.randomUUID(),
     createdAt: Date.now(),
     retries: 0,
   });
-  saveQueue(queue);
+  await saveQueue(queue);
 }
 
 export async function flushQueue(): Promise<number> {
-  const queue = getQueue();
+  const queue = await getQueue();
   if (queue.length === 0) return 0;
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -75,10 +106,11 @@ export async function flushQueue(): Promise<number> {
     }
   }
 
-  saveQueue(remaining);
+  await saveQueue(remaining);
   return synced;
 }
 
-export function getPendingCount(): number {
-  return getQueue().length;
+export async function getPendingCount(): Promise<number> {
+  const queue = await getQueue();
+  return queue.length;
 }
