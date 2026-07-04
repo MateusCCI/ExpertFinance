@@ -125,7 +125,7 @@ function NewCardForm({
     status: string;
     color: string;
     spendTargetForWaiver: number;
-    virtuals: Array<{ name: string; lastDigits: string }>;
+    virtuals: string[];
   }) => void;
   onCancel: () => void;
   editingCard?: CreditCardRow | null;
@@ -142,7 +142,7 @@ function NewCardForm({
   const [status, setStatus] = useState(editingCard?.status ?? "active");
   const [spendTarget, setSpendTarget] = useState(editingCard ? String(editingCard.spend_target_for_waiver ?? 0) : '0');
   const [cardColor, setCardColor] = useState(editingCard?.color ?? "#3b82f6");
-  const [virtuals, setVirtuals] = useState<Array<{ name: string; lastDigits: string }>>([]);
+  const [virtuals, setVirtuals] = useState<string[]>([]);
 
   const handleSave = () => {
     const limit = Number(totalLimit) || 0;
@@ -158,7 +158,7 @@ function NewCardForm({
       status,
       color: cardColor,
       spendTargetForWaiver: Number(spendTarget) || 0,
-      virtuals: virtuals.filter((v) => v.lastDigits.trim()),
+      virtuals: virtuals.filter((v) => v.trim()),
     });
   };
 
@@ -240,7 +240,7 @@ function NewCardForm({
           <Label className="text-sm">Cartoes virtuais</Label>
           <button
             type="button"
-            onClick={() => setVirtuals([...virtuals, { name: "", lastDigits: "" }])}
+            onClick={() => setVirtuals([...virtuals, ""])}
             className="text-xs text-primary hover:underline"
           >
             + Adicionar
@@ -251,24 +251,12 @@ function NewCardForm({
         )}
         {virtuals.map((v, i) => (
           <div key={i} className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
-              <Input
-                value={v.name}
-                onChange={(e) => {
-                  const next = [...virtuals];
-                  next[i] = { ...next[i], name: e.target.value };
-                  setVirtuals(next);
-                }}
-                placeholder="Nome (ex: Apple Pay)"
-                className="h-8 text-xs"
-              />
-            </div>
             <div className="w-20 space-y-1">
               <Input
                 value={v.lastDigits}
                 onChange={(e) => {
                   const next = [...virtuals];
-                  next[i] = { ...next[i], lastDigits: e.target.value };
+                  next[i] = e.target.value;
                   setVirtuals(next);
                 }}
                 maxLength={4}
@@ -667,7 +655,7 @@ export default function CreditCardsPage() {
     status: string;
     color: string;
     spendTargetForWaiver: number;
-    virtuals: Array<{ name: string; lastDigits: string }>;
+    virtuals: string[];
   }) => {
     try {
       const accountId = accounts[0]?.id ?? "";
@@ -718,9 +706,9 @@ export default function CreditCardsPage() {
         for (const v of data.virtuals) {
           await createCard({
             account_id: accountId,
-            name: v.name || `${data.name} (virtual)`,
+            name: `${data.name} (virtual)`,
             brand: data.brand,
-            last_digits: v.lastDigits.padEnd(4, "0"),
+            last_digits: v.padEnd(4, "0"),
             total_limit: 0,
             available_limit: 0,
             closing_day: data.closingDay,
