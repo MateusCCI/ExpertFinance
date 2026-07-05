@@ -1252,20 +1252,16 @@ export default function CreditCardsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* New card dialog — always mounted, CSS visibility toggle */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center ${showNewCard ? "" : "pointer-events-none opacity-0"}`}
-        style={{ visibility: showNewCard ? "visible" : "hidden" }}
-      >
-        <div className="fixed inset-0 bg-black/60" onClick={() => setShowNewCard(false)} />
-        <div className="relative z-50 w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-lg border border-border/60 bg-card p-6 shadow-lg">
+      {/* New card dialog */}
+      <Dialog open={showNewCard} onOpenChange={setShowNewCard}>
+        <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo cartão</DialogTitle>
             <DialogDescription>Adicione um novo cartão de crédito</DialogDescription>
           </DialogHeader>
           <NewCardForm physicalCards={physicalCards} onSave={handleSaveCard} onCancel={() => setShowNewCard(false)} form={newCardForm} setForm={setNewCardForm} />
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Quick expense dialog */}
       <QuickExpenseDialog open={showQuickExpense} onOpenChange={setShowQuickExpense} />
