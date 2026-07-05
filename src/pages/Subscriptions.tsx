@@ -94,7 +94,7 @@ function NewRecurringForm({
 }) {
   const [description, setDescription] = useState(editing?.description ?? "");
   const [amount, setAmount] = useState(editing ? String(editing.amount) : "");
-  const [type, setType] = useState<"income" | "expense">(editing?.type ?? "expense");
+  const [type, setType] = useState<"income" | "expense" | "transfer">(editing?.type ?? "expense");
   const [accountId, setAccountId] = useState(editing?.account_id ?? accounts[0]?.id ?? "");
   const [cardId, setCardId] = useState(editing?.credit_card_id ?? "");
   const [categoryId, setCategoryId] = useState(editing?.category_id ?? "");
@@ -269,7 +269,7 @@ function NewRecurringForm({
 }
 
 export default function Subscriptions() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [showQuickExpense, setShowQuickExpense] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -326,6 +326,7 @@ export default function Subscriptions() {
       } else {
         await createRecurring({
           ...data,
+          day_of_week: null,
           start_date: new Date().toISOString(),
           end_date: null,
         });
@@ -381,7 +382,13 @@ export default function Subscriptions() {
       <div className="flex flex-col md:flex-row">
         <main className="flex-1 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto px-4 py-6">
-            <MobileHeader title="Assinaturas" onQuickExpense={() => setShowQuickExpense(true)} onMenuClick={() => {}} />
+            <MobileHeader
+              icon={Repeat}
+              title="Assinaturas"
+              description="Gerencie seus gastos recorrentes"
+              onPlus={() => setShowNew(true)}
+              plusTitle="Nova assinatura"
+            />
 
             {/* Alerta de variáveis pendentes */}
             {pendingVariables.length > 0 && (
