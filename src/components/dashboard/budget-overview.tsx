@@ -59,7 +59,7 @@ export function BudgetOverview({ month, year }: BudgetOverviewProps) {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border/60 bg-card p-4">
+    <div className="rounded-lg border border-border/60 bg-card p-4 h-full">
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>

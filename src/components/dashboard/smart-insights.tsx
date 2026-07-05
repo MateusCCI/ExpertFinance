@@ -193,7 +193,7 @@ export function SmartInsights() {
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-card p-4">
+    <div className="rounded-lg border border-border/60 bg-card p-4 h-full">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold">Insights Inteligentes</h3>

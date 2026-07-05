@@ -16,6 +16,7 @@ import {
   Pencil,
   GripVertical,
   Repeat,
+  PieChart,
 } from "lucide-react";
 
 const defaultNavItems = [
@@ -29,6 +30,7 @@ const defaultNavItems = [
 const defaultExtraItems = [
   { label: "Terceiros", icon: Users, path: "/ledger" },
   { label: "Assinaturas", icon: Repeat, path: "/subscriptions" },
+  { label: "Orçamentos", icon: PieChart, path: "/budgets" },
   { label: "Missões", icon: Target, path: "/missions" },
   { label: "Relatórios", icon: BarChart3, path: "/reports" },
   { label: "Configurações", icon: Settings, path: "/settings" },
@@ -47,7 +49,7 @@ function loadOrder() {
 function loadExtraOrder() {
   try {
     const stored = JSON.parse(localStorage.getItem(NAV_KEY + "-extra") || "null");
-    if (stored && Array.isArray(stored) && stored.length === 5) return stored;
+    if (stored && Array.isArray(stored) && stored.length === 6) return stored;
   } catch {}
   return defaultExtraItems.map((i) => i.path);
 }

@@ -112,6 +112,8 @@ function NewCardForm({
   onCancel,
   editingCard,
   physicalCards,
+  form,
+  setForm,
 }: {
   onSave: (data: {
     name: string;
@@ -130,19 +132,36 @@ function NewCardForm({
   onCancel: () => void;
   editingCard?: CreditCardRow | null;
   physicalCards: CreditCardRow[];
+  form: {
+    brand: string;
+    cardName: string;
+    lastDigits: string;
+    totalLimit: string;
+    closingDay: string;
+    dueDay: string;
+    annualFee: string;
+    cashbackRate: string;
+    status: string;
+    spendTarget: string;
+    cardColor: string;
+    virtuals: string[];
+  };
+  setForm: React.Dispatch<React.SetStateAction<{
+    brand: string;
+    cardName: string;
+    lastDigits: string;
+    totalLimit: string;
+    closingDay: string;
+    dueDay: string;
+    annualFee: string;
+    cashbackRate: string;
+    status: string;
+    spendTarget: string;
+    cardColor: string;
+    virtuals: string[];
+  }>>;
 }) {
-  const [brand, setBrand] = useState(editingCard?.brand ?? "Visa");
-  const [cardName, setCardName] = useState(editingCard?.name ?? "");
-  const [lastDigits, setLastDigits] = useState(editingCard?.last_digits ?? "");
-  const [totalLimit, setTotalLimit] = useState(editingCard ? String(editingCard.total_limit) : "");
-  const [closingDay, setClosingDay] = useState(editingCard ? String(editingCard.closing_day) : "");
-  const [dueDay, setDueDay] = useState(editingCard ? String(editingCard.due_day) : "");
-  const [annualFee, setAnnualFee] = useState(editingCard ? String(editingCard.annual_fee ?? 0) : "0");
-  const [cashbackRate, setCashbackRate] = useState(editingCard ? String((editingCard.cashback_rate ?? 0) * 100) : "0");
-  const [status, setStatus] = useState(editingCard?.status ?? "active");
-  const [spendTarget, setSpendTarget] = useState(editingCard ? String(editingCard.spend_target_for_waiver ?? 0) : '0');
-  const [cardColor, setCardColor] = useState(editingCard?.color ?? "#3b82f6");
-  const [virtuals, setVirtuals] = useState<string[]>([]);
+  const { brand, cardName, lastDigits, totalLimit, closingDay, dueDay, annualFee, cashbackRate, status, spendTarget, cardColor, virtuals } = form;
 
   const handleSave = () => {
     const limit = Number(totalLimit) || 0;
@@ -166,7 +185,7 @@ function NewCardForm({
     <div className="space-y-4 py-2">
       <div className="space-y-1.5">
         <Label htmlFor="new-name">Nome do cartão</Label>
-        <Input id="new-name" value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="Ex: Nubank Ultravioleta" />
+        <Input id="new-name" value={cardName} onChange={(e) => setForm(f => ({ ...f, cardName: e.target.value }))} placeholder="Ex: Nubank Ultravioleta" />
       </div>
       <div className="space-y-1.5">
         <Label>Cor do cartão</Label>
@@ -175,7 +194,7 @@ function NewCardForm({
             <button
               key={color}
               type="button"
-              onClick={() => setCardColor(color)}
+              onClick={() => setForm(f => ({ ...f, cardColor: color }))}
               className={`w-7 h-7 rounded-full border-2 transition-all ${
                 cardColor === color ? "border-foreground scale-110" : "border-transparent"
               }`}
@@ -189,7 +208,7 @@ function NewCardForm({
         <select
           id="new-brand"
           value={brand}
-          onChange={(e) => setBrand(e.target.value)}
+          onChange={(e) => setForm(f => ({ ...f, brand: e.target.value }))}
           className="flex w-full h-8 items-center rounded-md border px-3 py-1 text-sm outline-none"
         >
           <option value="Visa">Visa</option>
@@ -202,36 +221,36 @@ function NewCardForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="new-digits">Últimos 4 dígitos</Label>
-          <Input id="new-digits" value={lastDigits} onChange={(e) => setLastDigits(e.target.value)} maxLength={4} placeholder="0000" />
+          <Input id="new-digits" value={lastDigits} onChange={(e) => setForm(f => ({ ...f, lastDigits: e.target.value }))} maxLength={4} placeholder="0000" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="new-limit">Limite total (R$)</Label>
-          <Input id="new-limit" type="number" value={totalLimit} onChange={(e) => setTotalLimit(e.target.value)} placeholder="5000" />
+          <Input id="new-limit" type="number" value={totalLimit} onChange={(e) => setForm(f => ({ ...f, totalLimit: e.target.value }))} placeholder="5000" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="new-closing">Dia fechamento</Label>
-          <Input id="new-closing" type="number" min="1" max="28" value={closingDay} onChange={(e) => setClosingDay(e.target.value)} placeholder="15" />
+          <Input id="new-closing" type="number" min="1" max="28" value={closingDay} onChange={(e) => setForm(f => ({ ...f, closingDay: e.target.value }))} placeholder="15" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="new-due">Dia vencimento</Label>
-          <Input id="new-due" type="number" min="1" max="28" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="22" />
+          <Input id="new-due" type="number" min="1" max="28" value={dueDay} onChange={(e) => setForm(f => ({ ...f, dueDay: e.target.value }))} placeholder="22" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="new-fee">Anuidade (R$/ano)</Label>
-          <Input id="new-fee" type="number" value={annualFee} onChange={(e) => setAnnualFee(e.target.value)} placeholder="0" />
+          <Input id="new-fee" type="number" value={annualFee} onChange={(e) => setForm(f => ({ ...f, annualFee: e.target.value }))} placeholder="0" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="new-cashback">Cashback (%)</Label>
-          <Input id="new-cashback" type="number" step="0.1" min="0" max="100" value={cashbackRate} onChange={(e) => setCashbackRate(e.target.value)} placeholder="1" />
+          <Input id="new-cashback" type="number" step="0.1" min="0" max="100" value={cashbackRate} onChange={(e) => setForm(f => ({ ...f, cashbackRate: e.target.value }))} placeholder="1" />
         </div>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="new-spend-target">Meta de gasto para isenção (R$/ano)</Label>
-        <Input id="new-spend-target" type="number" value={spendTarget} onChange={(e) => setSpendTarget(e.target.value)} placeholder="0" />
+        <Input id="new-spend-target" type="number" value={spendTarget} onChange={(e) => setForm(f => ({ ...f, spendTarget: e.target.value }))} placeholder="0" />
       </div>
 
       {/* Cartoes virtuais */}
@@ -240,7 +259,7 @@ function NewCardForm({
           <Label className="text-sm">Cartoes virtuais</Label>
           <button
             type="button"
-            onClick={() => setVirtuals([...virtuals, ""])}
+            onClick={() => setForm(f => ({ ...f, virtuals: [...f.virtuals, ""] }))}
             className="text-xs text-primary hover:underline"
           >
             + Adicionar
@@ -257,7 +276,7 @@ function NewCardForm({
                 onChange={(e) => {
                   const next = [...virtuals];
                   next[i] = e.target.value;
-                  setVirtuals(next);
+                  setForm(f => ({ ...f, virtuals: next }));
                 }}
                 maxLength={4}
                 placeholder="0000"
@@ -266,7 +285,7 @@ function NewCardForm({
             </div>
             <button
               type="button"
-              onClick={() => setVirtuals(virtuals.filter((_, j) => j !== i))}
+              onClick={() => setForm(f => ({ ...f, virtuals: f.virtuals.filter((_, j) => j !== i) }))}
               className="p-1.5 text-muted-foreground hover:text-red-500"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -283,7 +302,7 @@ function NewCardForm({
           <Button
             variant={status === "active" ? "destructive" : "default"}
             size="sm"
-            onClick={() => setStatus(status === "active" ? "blocked" : "active")}
+            onClick={() => setForm(f => ({ ...f, status: f.status === "active" ? "blocked" : "active" }))}
           >
             {status === "active" ? "Bloquear" : "Ativar"}
           </Button>
@@ -492,6 +511,26 @@ export default function CreditCardsPage() {
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   const [showQuickExpense, setShowQuickExpense] = useState(false);
   const [showNewCard, setShowNewCard] = useState(false);
+  const [newCardForm, setNewCardForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem("newCardFormDraft");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      brand: "Visa",
+      cardName: "",
+      lastDigits: "",
+      totalLimit: "",
+      closingDay: "",
+      dueDay: "",
+      annualFee: "",
+      cashbackRate: "",
+      status: "active",
+      spendTarget: "",
+      cardColor: "#3b82f6",
+      virtuals: [] as string[],
+    };
+  });
 
   const {
     cards: rawCards,
@@ -623,6 +662,35 @@ export default function CreditCardsPage() {
     }
   }, [isLoading, isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (editingCardId) {
+      const card = rawCards.find((c) => c.id === editingCardId);
+      if (card) {
+        setNewCardForm({
+          brand: card.brand ?? "Visa",
+          cardName: card.name ?? "",
+          lastDigits: card.last_digits ?? "",
+          totalLimit: String(card.total_limit ?? ""),
+          closingDay: String(card.closing_day ?? ""),
+          dueDay: String(card.due_day ?? ""),
+          annualFee: String(card.annual_fee ?? ""),
+          cashbackRate: String((card.cashback_rate ?? 0) * 100 || ""),
+          status: card.status ?? "active",
+          spendTarget: String(card.spend_target_for_waiver ?? ""),
+          cardColor: card.color ?? "#3b82f6",
+          virtuals: [],
+        });
+      }
+    }
+  }, [editingCardId]);
+
+  useEffect(() => {
+    const hasContent = newCardForm.cardName || newCardForm.lastDigits || newCardForm.totalLimit;
+    if (hasContent) {
+      localStorage.setItem("newCardFormDraft", JSON.stringify(newCardForm));
+    }
+  }, [newCardForm]);
+
   if (isLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -729,6 +797,21 @@ export default function CreditCardsPage() {
         toast("Cartao adicionado", { description: data.name + (data.virtuals.length > 0 ? ` + ${data.virtuals.length} virtual(is)` : "") });
       }
       setShowNewCard(false);
+      localStorage.removeItem("newCardFormDraft");
+      setNewCardForm({
+        brand: "Visa",
+        cardName: "",
+        lastDigits: "",
+        totalLimit: "",
+        closingDay: "",
+        dueDay: "",
+        annualFee: "",
+        cashbackRate: "",
+        status: "active",
+        spendTarget: "",
+        cardColor: "#3b82f6",
+        virtuals: [],
+      });
     } catch (err) {
       toast.error("Erro ao salvar cartão");
       console.error(err);
@@ -818,41 +901,41 @@ export default function CreditCardsPage() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className="grid grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6"
             >
-              <div className="p-3 md:p-5 rounded-lg border border-border/60 bg-card">
+              <div className="p-3 md:p-5 rounded-lg border border-border/60 bg-card overflow-hidden min-w-0">
                 <div className="flex items-center justify-between mb-2 md:mb-3">
                   <span className="text-[10px] md:text-xs text-muted-foreground">Limite Total</span>
-                  <CreditCard className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                  <CreditCard className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                 </div>
-                <span className="text-sm md:text-2xl font-light tracking-tight">
+                <span className="text-sm md:text-2xl font-light tracking-tight block truncate">
                   R$ {formatCurrency(totalLimit)}
                 </span>
-                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1 truncate">
                   R$ {formatCurrency(totalAvailable)} disp.
                 </p>
               </div>
 
-              <div className="p-3 md:p-5 rounded-lg border border-border/60 bg-card">
+              <div className="p-3 md:p-5 rounded-lg border border-border/60 bg-card overflow-hidden min-w-0">
                 <div className="flex items-center justify-between mb-2 md:mb-3">
                   <span className="text-[10px] md:text-xs text-muted-foreground">Cashback</span>
-                  <PiggyBank className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                  <PiggyBank className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                 </div>
-                <span className="text-sm md:text-2xl font-light tracking-tight">
+                <span className="text-sm md:text-2xl font-light tracking-tight block truncate">
                   R$ {formatCurrency(totalCashback)}
                 </span>
-                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1 truncate">
                   Acumulado
                 </p>
               </div>
 
-              <div className="p-3 md:p-5 rounded-lg border border-border/60 bg-card">
+              <div className="p-3 md:p-5 rounded-lg border border-border/60 bg-card overflow-hidden min-w-0">
                 <div className="flex items-center justify-between mb-2 md:mb-3">
                   <span className="text-[10px] md:text-xs text-muted-foreground">Ativos</span>
-                  <Gauge className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                  <Gauge className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                 </div>
-                <span className="text-sm md:text-2xl font-light tracking-tight">
+                <span className="text-sm md:text-2xl font-light tracking-tight block truncate">
                   {physicalCards.length}
                 </span>
-                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1 truncate">
                   cartão(is) ativo(s)
                 </p>
               </div>
@@ -1162,21 +1245,27 @@ export default function CreditCardsPage() {
               physicalCards={physicalCards}
               onSave={handleSaveCard}
               onCancel={() => setEditingCardId(null)}
+              form={newCardForm}
+              setForm={setNewCardForm}
             />
           )}
         </DialogContent>
       </Dialog>
 
-      {/* New card dialog */}
-      <Dialog open={showNewCard} onOpenChange={setShowNewCard}>
-        <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto">
+      {/* New card dialog — always mounted, CSS visibility toggle */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center ${showNewCard ? "" : "pointer-events-none opacity-0"}`}
+        style={{ visibility: showNewCard ? "visible" : "hidden" }}
+      >
+        <div className="fixed inset-0 bg-black/60" onClick={() => setShowNewCard(false)} />
+        <div className="relative z-50 w-full sm:max-w-md max-h-[85dvh] overflow-y-auto rounded-lg border border-border/60 bg-card p-6 shadow-lg">
           <DialogHeader>
             <DialogTitle>Novo cartão</DialogTitle>
             <DialogDescription>Adicione um novo cartão de crédito</DialogDescription>
           </DialogHeader>
-          <NewCardForm physicalCards={physicalCards} onSave={handleSaveCard} onCancel={() => setShowNewCard(false)} />
-        </DialogContent>
-      </Dialog>
+          <NewCardForm physicalCards={physicalCards} onSave={handleSaveCard} onCancel={() => setShowNewCard(false)} form={newCardForm} setForm={setNewCardForm} />
+        </div>
+      </div>
 
       {/* Quick expense dialog */}
       <QuickExpenseDialog open={showQuickExpense} onOpenChange={setShowQuickExpense} />

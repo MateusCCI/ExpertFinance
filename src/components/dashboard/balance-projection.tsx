@@ -70,7 +70,7 @@ export function BalanceProjection() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="rounded-lg border border-border/60 bg-card p-4"
+      className="rounded-lg border border-border/60 bg-card p-4 h-full"
     >
       <div className="flex items-center gap-2 mb-4">
         <Gauge className="h-4 w-4 text-primary" />

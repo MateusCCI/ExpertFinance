@@ -17,6 +17,7 @@ const Missions = lazy(() => import("./pages/Missions.tsx"));
 const Accounts = lazy(() => import("./pages/Accounts.tsx"));
 const Reports = lazy(() => import("./pages/Reports.tsx"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions.tsx"));
+const BudgetCategories = lazy(() => import("./pages/BudgetCategories.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 function RouteLoading() {
@@ -70,6 +71,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/budgets" element={<BudgetCategories />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
