@@ -40,6 +40,7 @@ import {
   Sun,
   Menu,
   Repeat,
+  PieChart,
 } from "lucide-react";
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -73,6 +74,8 @@ const navItems = [
   { label: "Contas", icon: Wallet, id: "accounts" },
   { label: "Aluguel", icon: Landmark, id: "rent" },
   { label: "Terceiros", icon: Users, id: "ledger" },
+  { label: "Assinaturas", icon: Repeat, id: "subscriptions" },
+  { label: "Categorias", icon: PieChart, id: "budgets" },
   { label: "Missões", icon: Target, id: "missions" },
   { label: "Relatórios", icon: BarChart3, id: "reports" },
   { label: "Configurações", icon: Settings, id: "settings" },
@@ -293,6 +296,8 @@ export default function Dashboard() {
                 if (item.id === "ledger") navigate("/ledger");
                 if (item.id === "rent") navigate("/rent");
                 if (item.id === "accounts") navigate("/accounts");
+                if (item.id === "subscriptions") navigate("/subscriptions");
+                if (item.id === "budgets") navigate("/budgets");
                 if (item.id === "missions") navigate("/missions");
                 if (item.id === "reports") navigate("/reports");
                 if (item.id === "settings") navigate("/settings");
