@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { dbLocal } from "@/lib/indexedb";
 
 export interface Invoice {
   id: string;
@@ -24,22 +25,38 @@ export function useInvoices(cardId?: string) {
 
   useEffect(() => {
     const fetch = async () => {
-      let query = supabase
-        .from("invoices")
-        .select("*")
-        .order("year", { ascending: false })
-        .order("month", { ascending: false });
+      // 1. Load from cache
+      try {
+        const cached = await dbLocal.getInvoices<Invoice>();
+        const filtered = cardId ? cached.filter((i) => i.credit_card_id === cardId) : cached;
+        if (filtered.length > 0) {
+          setInvoices(filtered);
+          setLoading(false);
+        }
+      } catch {}
 
-      if (cardId) {
-        query = query.eq("credit_card_id", cardId);
-      }
+      // 2. Fetch fresh
+      try {
+        let query = supabase
+          .from("invoices")
+          .select("*")
+          .order("year", { ascending: false })
+          .order("month", { ascending: false });
 
-      const { data, error } = await query;
-      if (error) {
-        console.error("Error fetching invoices:", error);
+        if (cardId) {
+          query = query.eq("credit_card_id", cardId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        const fresh = data || [];
+        setInvoices(fresh);
+        setLoading(false);
+        dbLocal.cacheInvoices(fresh).catch(() => {});
+      } catch (err) {
+        console.error("Error fetching invoices:", err);
+        if (invoices.length === 0) setLoading(false);
       }
-      setInvoices(data || []);
-      setLoading(false);
     };
 
     fetch();
@@ -56,7 +73,11 @@ export function useInvoices(cardId?: string) {
       .single();
 
     if (error) throw error;
-    setInvoices((prev) => [data, ...prev]);
+    setInvoices((prev) => {
+      const next = [data, ...prev];
+      dbLocal.cacheInvoices(next).catch(() => {});
+      return next;
+    });
     return data;
   };
 
@@ -67,7 +88,11 @@ export function useInvoices(cardId?: string) {
       .eq("id", id);
 
     if (error) throw error;
-    setInvoices((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+    setInvoices((prev) => {
+      const next = prev.map((i) => (i.id === id ? { ...i, ...patch } : i));
+      dbLocal.cacheInvoices(next).catch(() => {});
+      return next;
+    });
   };
 
   const deleteInvoice = async (id: string) => {
@@ -77,7 +102,11 @@ export function useInvoices(cardId?: string) {
       .eq("id", id);
 
     if (error) throw error;
-    setInvoices((prev) => prev.filter((i) => i.id !== id));
+    setInvoices((prev) => {
+      const next = prev.filter((i) => i.id !== id);
+      dbLocal.cacheInvoices(next).catch(() => {});
+      return next;
+    });
   };
 
   return { invoices, loading, createInvoice, updateInvoice, deleteInvoice };

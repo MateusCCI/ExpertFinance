@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { dbLocal } from "@/lib/indexedb";
 
 export interface Account {
   id: string;
@@ -39,19 +40,33 @@ export function useAccounts() {
 
   useEffect(() => {
     const fetch = async () => {
-      await ensureProfile();
+      // 1. Load from cache
+      try {
+        const cached = await dbLocal.getAccounts<Account>();
+        if (cached.length > 0) {
+          setAccounts(cached);
+          setLoading(false);
+        }
+      } catch {}
 
-      const { data, error } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+      // 2. Fetch fresh
+      try {
+        await ensureProfile();
+        const { data, error } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("is_active", true)
+          .order("name");
 
-      if (error) {
-        console.error("Error fetching accounts:", error);
+        if (error) throw error;
+        const fresh = data || [];
+        setAccounts(fresh);
+        setLoading(false);
+        dbLocal.cacheAccounts(fresh).catch(() => {});
+      } catch (err) {
+        console.error("Error fetching accounts:", err);
+        if (accounts.length === 0) setLoading(false);
       }
-      setAccounts(data || []);
-      setLoading(false);
     };
 
     fetch();
@@ -68,7 +83,11 @@ export function useAccounts() {
       .single();
 
     if (error) throw error;
-    setAccounts((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    setAccounts((prev) => {
+      const next = [...prev, data].sort((a, b) => a.name.localeCompare(b.name));
+      dbLocal.cacheAccounts(next).catch(() => {});
+      return next;
+    });
     return data;
   };
 
@@ -79,7 +98,11 @@ export function useAccounts() {
       .eq("id", id);
 
     if (error) throw error;
-    setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+    setAccounts((prev) => {
+      const next = prev.map((a) => (a.id === id ? { ...a, ...patch } : a));
+      dbLocal.cacheAccounts(next).catch(() => {});
+      return next;
+    });
   };
 
   const deleteAccount = async (id: string) => {
@@ -89,7 +112,11 @@ export function useAccounts() {
       .eq("id", id);
 
     if (error) throw error;
-    setAccounts((prev) => prev.filter((a) => a.id !== id));
+    setAccounts((prev) => {
+      const next = prev.filter((a) => a.id !== id);
+      dbLocal.cacheAccounts(next).catch(() => {});
+      return next;
+    });
   };
 
   return { accounts, loading, createAccount, updateAccount, deleteAccount };

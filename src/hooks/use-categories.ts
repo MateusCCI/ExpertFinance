@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ensureProfile } from "@/lib/ensure-profile";
+import { dbLocal } from "@/lib/indexedb";
 
 export interface Category {
   id: string;
@@ -19,17 +20,32 @@ export function useCategories() {
 
   useEffect(() => {
     const fetch = async () => {
-      await ensureProfile();
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name");
+      // 1. Load from cache
+      try {
+        const cached = await dbLocal.getCategories<Category>();
+        if (cached.length > 0) {
+          setCategories(cached);
+          setLoading(false);
+        }
+      } catch {}
 
-      if (error) {
-        console.error("Error fetching categories:", error);
+      // 2. Fetch fresh
+      try {
+        await ensureProfile();
+        const { data, error } = await supabase
+          .from("categories")
+          .select("*")
+          .order("name");
+
+        if (error) throw error;
+        const fresh = data || [];
+        setCategories(fresh);
+        setLoading(false);
+        dbLocal.cacheCategories(fresh).catch(() => {});
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+        if (categories.length === 0) setLoading(false);
       }
-      setCategories(data || []);
-      setLoading(false);
     };
 
     fetch();
@@ -47,7 +63,11 @@ export function useCategories() {
       .single();
 
     if (error) throw error;
-    setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    setCategories((prev) => {
+      const next = [...prev, data].sort((a, b) => a.name.localeCompare(b.name));
+      dbLocal.cacheCategories(next).catch(() => {});
+      return next;
+    });
     return data;
   };
 
@@ -58,9 +78,11 @@ export function useCategories() {
       .eq("id", id);
 
     if (error) throw error;
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...patch } : c))
-    );
+    setCategories((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...patch } : c));
+      dbLocal.cacheCategories(next).catch(() => {});
+      return next;
+    });
   };
 
   const deleteCategory = async (id: string) => {
@@ -70,7 +92,11 @@ export function useCategories() {
       .eq("id", id);
 
     if (error) throw error;
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    setCategories((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      dbLocal.cacheCategories(next).catch(() => {});
+      return next;
+    });
   };
 
   return { categories, loading, createCategory, updateCategory, deleteCategory };
