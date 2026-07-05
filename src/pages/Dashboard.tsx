@@ -39,6 +39,7 @@ import {
   Moon,
   Sun,
   Menu,
+  Repeat,
 } from "lucide-react";
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -48,6 +49,7 @@ import { MobileHeader } from "@/components/mobile-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { Navigate } from "react-router";
 import { useAlerts } from "@/hooks/use-alerts";
+import { useRecurringTransactions, isVariableDue } from "@/hooks/use-recurring";
 import logo from "@/assets/logo.svg";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { SavingsGoals } from "@/components/dashboard/savings-goals";
@@ -94,6 +96,11 @@ export default function Dashboard() {
   const { missions: bankMissions, progress: missionProgress, loading: missionsLoading } = useMissions();
   const { transactions: allTransactions, loading: txLoading } = useTransactions();
   const { unreadCount } = useAlerts();
+  const { recurring: recurringTxns, generateDue } = useRecurringTransactions();
+
+  useEffect(() => {
+    generateDue();
+  }, []);
 
   const anyLoading = accountsLoading || cardsLoading || invoicesLoading || ledgerLoading || rentLoading || missionsLoading || txLoading;
 
@@ -656,7 +663,70 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* ===== ROW 4: Insights Inteligentes + Projeção ===== */}
+          {/* ===== ROW 4: Assinaturas Próximas ===== */}
+          {recurringTxns.filter((r) => r.is_active).length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }} className="mb-4 md:mb-6">
+              <div className="rounded-lg border border-border/60 bg-card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-medium">Próximas Assinaturas</h3>
+                  </div>
+                  <button onClick={() => navigate("/subscriptions")} className="text-xs text-primary hover:underline">
+                    Ver todas
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {/* Variáveis pendentes primeiro */}
+                  {recurringTxns.filter(isVariableDue).map((rec) => (
+                    <div key={rec.id} className="flex items-center justify-between bg-amber-50/50 dark:bg-amber-950/20 rounded-md px-2 py-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span className="text-xs text-foreground truncate">{rec.description}</span>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0">Pendente</span>
+                      </div>
+                      <button onClick={() => navigate("/subscriptions")} className="text-[10px] text-primary hover:underline shrink-0 ml-2">
+                        Informar valor
+                      </button>
+                    </div>
+                  ))}
+                  {/* Fixas próximas */}
+                  {recurringTxns
+                    .filter((r) => r.is_active && !r.is_variable)
+                    .sort((a, b) => a.day_of_month - b.day_of_month)
+                    .slice(0, 5)
+                    .map((rec) => {
+                      const now = new Date();
+                      const target = new Date(now.getFullYear(), now.getMonth(), rec.day_of_month);
+                      if (now.getDate() > rec.day_of_month) {
+                        if (rec.frequency === "monthly") target.setMonth(target.getMonth() + 1);
+                        else target.setFullYear(target.getFullYear() + 1);
+                      }
+                      return (
+                        <div key={rec.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`text-xs font-medium ${rec.type === "expense" ? "text-red-500" : "text-green-500"}`}>
+                              {rec.type === "expense" ? "-" : "+"}
+                            </span>
+                            <span className="text-xs text-foreground truncate">{rec.description}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] text-muted-foreground">
+                              {target.getDate()}/{target.getMonth() + 1}
+                            </span>
+                            <span className="text-xs font-medium tabular-nums">
+                              R$ {rec.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== ROW 5: Insights Inteligentes + Projeção ===== */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.35 }}>
               <SmartInsights />
