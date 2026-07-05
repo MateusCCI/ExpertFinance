@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ensureProfile } from "@/lib/ensure-profile";
 import { getPhysicalCardId } from "@/lib/card-utils";
-import { dbLocal } from "@/lib/indexedb";
-import { toast } from "sonner";
 
 export interface CreditCard {
   id: string;
@@ -36,19 +34,6 @@ export function useCreditCards() {
     let cancelled = false;
 
     const fetch = async () => {
-      // 1. Load from IndexedDB cache first
-      try {
-        const cached = await Promise.race([
-          dbLocal.getCards<CreditCard>(),
-          new Promise<[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
-        ]);
-        if (!cancelled && cached.length > 0) {
-          setCards(cached);
-          setLoading(false);
-        }
-      } catch {}
-
-      // 2. Fetch fresh data from Supabase
       try {
         await ensureProfile();
         const { data, error } = await supabase
@@ -58,15 +43,10 @@ export function useCreditCards() {
           .order("name");
 
         if (error) throw error;
-
-        const fresh = data || [];
         if (!cancelled) {
-          setCards(fresh);
+          setCards(data || []);
           setLoading(false);
         }
-
-        // 3. Update cache
-        dbLocal.cacheCards(fresh).catch(() => {});
       } catch (err) {
         console.error("Error fetching credit cards:", err);
         if (!cancelled) setLoading(false);
@@ -88,11 +68,7 @@ export function useCreditCards() {
       .single();
 
     if (error) throw error;
-    setCards((prev) => {
-      const next = [...prev, data].sort((a, b) => a.name.localeCompare(b.name));
-      dbLocal.cacheCards(next).catch(() => {});
-      return next;
-    });
+    setCards((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
     return data;
   };
 
@@ -103,11 +79,7 @@ export function useCreditCards() {
       .eq("id", id);
 
     if (error) throw error;
-    setCards((prev) => {
-      const next = prev.map((c) => (c.id === id ? { ...c, ...patch } : c));
-      dbLocal.cacheCards(next).catch(() => {});
-      return next;
-    });
+    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   };
 
   const deleteCard = async (id: string) => {
@@ -116,41 +88,43 @@ export function useCreditCards() {
       .update({ credit_card_id: null, updated_at: new Date().toISOString() })
       .eq("credit_card_id", id)
       .select("id");
+    console.log("[deleteCard] transactions unlink:", txResult.data?.length ?? 0, "rows", txResult.error?.message ?? "ok");
 
     const invResult = await supabase
       .from("invoices")
       .delete()
       .eq("credit_card_id", id)
       .select("id");
+    console.log("[deleteCard] invoices delete:", invResult.data?.length ?? 0, "rows", invResult.error?.message ?? "ok");
 
     const virtResult = await supabase
       .from("credit_cards")
       .delete()
       .eq("parent_card_id", id)
       .select("id");
+    console.log("[deleteCard] virtuals delete:", virtResult.data?.length ?? 0, "rows", virtResult.error?.message ?? "ok");
 
     const delResult = await supabase
       .from("credit_cards")
       .delete()
       .eq("id", id)
       .select("id");
+    console.log("[deleteCard] card hard delete:", delResult.data?.length ?? 0, "rows", delResult.error?.message ?? "ok");
 
     if (delResult.error || !delResult.data || delResult.data.length === 0) {
+      console.log("[deleteCard] hard delete falhou, tentando soft delete...");
       const softResult = await supabase
         .from("credit_cards")
         .update({ status: "cancelled", updated_at: new Date().toISOString() })
         .eq("id", id)
         .select("id");
+      console.log("[deleteCard] soft delete:", softResult.data?.length ?? 0, "rows", softResult.error?.message ?? "ok");
       if (softResult.error || !softResult.data || softResult.data.length === 0) {
         throw new Error("Operação bloqueada pelas políticas RLS.");
       }
     }
 
-    setCards((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      dbLocal.cacheCards(next).catch(() => {});
-      return next;
-    });
+    setCards((prev) => prev.filter((c) => c.id !== id));
   };
 
   const updateCardLimit = async (id: string, delta: number) => {
@@ -160,11 +134,7 @@ export function useCreditCards() {
       .rpc("update_card_limit_atomic", { p_card_id: physicalId, p_delta: delta });
 
     if (!rpcError && newLimit !== null) {
-      setCards((prev) => {
-        const next = prev.map((c) => (c.id === physicalId ? { ...c, available_limit: newLimit } : c));
-        dbLocal.cacheCards(next).catch(() => {});
-        return next;
-      });
+      setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: newLimit } : c)));
       return;
     }
 
@@ -186,11 +156,7 @@ export function useCreditCards() {
 
     if (error) throw error;
 
-    setCards((prev) => {
-      const next = prev.map((c) => (c.id === physicalId ? { ...c, available_limit: updatedLimit } : c));
-      dbLocal.cacheCards(next).catch(() => {});
-      return next;
-    });
+    setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: updatedLimit } : c)));
   };
 
   return { cards, loading, createCard, updateCard, deleteCard, updateCardLimit };
