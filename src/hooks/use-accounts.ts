@@ -39,17 +39,20 @@ export function useAccounts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetch = async () => {
-      // 1. Load from cache
       try {
-        const cached = await dbLocal.getAccounts<Account>();
-        if (cached.length > 0) {
+        const cached = await Promise.race([
+          dbLocal.getAccounts<Account>(),
+          new Promise<[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+        ]);
+        if (!cancelled && cached.length > 0) {
           setAccounts(cached);
           setLoading(false);
         }
       } catch {}
 
-      // 2. Fetch fresh
       try {
         await ensureProfile();
         const { data, error } = await supabase
@@ -60,16 +63,19 @@ export function useAccounts() {
 
         if (error) throw error;
         const fresh = data || [];
-        setAccounts(fresh);
-        setLoading(false);
+        if (!cancelled) {
+          setAccounts(fresh);
+          setLoading(false);
+        }
         dbLocal.cacheAccounts(fresh).catch(() => {});
       } catch (err) {
         console.error("Error fetching accounts:", err);
-        if (accounts.length === 0) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetch();
+    return () => { cancelled = true; };
   }, []);
 
   const createAccount = async (acc: Omit<Account, "id" | "user_id" | "created_at" | "updated_at" | "sync_status" | "color">) => {

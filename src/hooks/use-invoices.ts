@@ -24,18 +24,21 @@ export function useInvoices(cardId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetch = async () => {
-      // 1. Load from cache
       try {
-        const cached = await dbLocal.getInvoices<Invoice>();
-        const filtered = cardId ? cached.filter((i) => i.credit_card_id === cardId) : cached;
-        if (filtered.length > 0) {
+        const cached = await Promise.race([
+          dbLocal.getInvoices<Invoice>(),
+          new Promise<[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+        ]);
+        const filtered = cardId ? cached.filter((i: Invoice) => i.credit_card_id === cardId) : cached;
+        if (!cancelled && filtered.length > 0) {
           setInvoices(filtered);
           setLoading(false);
         }
       } catch {}
 
-      // 2. Fetch fresh
       try {
         let query = supabase
           .from("invoices")
@@ -50,16 +53,19 @@ export function useInvoices(cardId?: string) {
         const { data, error } = await query;
         if (error) throw error;
         const fresh = data || [];
-        setInvoices(fresh);
-        setLoading(false);
+        if (!cancelled) {
+          setInvoices(fresh);
+          setLoading(false);
+        }
         dbLocal.cacheInvoices(fresh).catch(() => {});
       } catch (err) {
         console.error("Error fetching invoices:", err);
-        if (invoices.length === 0) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetch();
+    return () => { cancelled = true; };
   }, [cardId]);
 
   const createInvoice = async (inv: Omit<Invoice, "id" | "user_id" | "created_at" | "updated_at">) => {

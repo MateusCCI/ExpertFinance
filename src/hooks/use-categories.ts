@@ -19,17 +19,20 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetch = async () => {
-      // 1. Load from cache
       try {
-        const cached = await dbLocal.getCategories<Category>();
-        if (cached.length > 0) {
+        const cached = await Promise.race([
+          dbLocal.getCategories<Category>(),
+          new Promise<[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+        ]);
+        if (!cancelled && cached.length > 0) {
           setCategories(cached);
           setLoading(false);
         }
       } catch {}
 
-      // 2. Fetch fresh
       try {
         await ensureProfile();
         const { data, error } = await supabase
@@ -39,16 +42,19 @@ export function useCategories() {
 
         if (error) throw error;
         const fresh = data || [];
-        setCategories(fresh);
-        setLoading(false);
+        if (!cancelled) {
+          setCategories(fresh);
+          setLoading(false);
+        }
         dbLocal.cacheCategories(fresh).catch(() => {});
       } catch (err) {
         console.error("Error fetching categories:", err);
-        if (categories.length === 0) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetch();
+    return () => { cancelled = true; };
   }, []);
 
   const createCategory = async (cat: Omit<Category, "id" | "user_id" | "created_at">) => {

@@ -33,11 +33,16 @@ export function useCreditCards() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetch = async () => {
       // 1. Load from IndexedDB cache first
       try {
-        const cached = await dbLocal.getCards<CreditCard>();
-        if (cached.length > 0) {
+        const cached = await Promise.race([
+          dbLocal.getCards<CreditCard>(),
+          new Promise<[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+        ]);
+        if (!cancelled && cached.length > 0) {
           setCards(cached);
           setLoading(false);
         }
@@ -55,19 +60,21 @@ export function useCreditCards() {
         if (error) throw error;
 
         const fresh = data || [];
-        setCards(fresh);
-        setLoading(false);
+        if (!cancelled) {
+          setCards(fresh);
+          setLoading(false);
+        }
 
         // 3. Update cache
         dbLocal.cacheCards(fresh).catch(() => {});
       } catch (err) {
         console.error("Error fetching credit cards:", err);
-        // If we already loaded from cache, keep it; otherwise show empty
-        if (cards.length === 0) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetch();
+    return () => { cancelled = true; };
   }, []);
 
   const createCard = async (card: Omit<CreditCard, "id" | "user_id" | "created_at" | "updated_at" | "sync_status">) => {
