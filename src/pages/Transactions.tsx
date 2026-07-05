@@ -438,12 +438,18 @@ export default function TransactionsPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+              onClick={async () => {
                 const id = deleteConfirmRef.current;
                 if (id) {
-                  deleteTransaction(id).catch((err) => {
-                    toast.error("Erro ao excluir transação", { description: err.message });
-                  });
+                  try {
+                    const tx = await deleteTransaction(id);
+                    if (tx?.credit_card_id && tx.type === "expense") {
+                      await updateCardLimit(tx.credit_card_id, tx.amount);
+                    }
+                    toast("Transação excluída");
+                  } catch (err: any) {
+                    toast.error("Erro ao excluir", { description: err.message });
+                  }
                 }
                 setDeleteConfirmId(null);
               }}

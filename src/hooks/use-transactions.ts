@@ -82,7 +82,6 @@ export function useTransactions(accountId?: string) {
   };
 
   const deleteTransaction = async (id: string) => {
-    // Buscar transação antes de deletar para restaurar limite
     const tx = transactions.find((t) => t.id === id);
 
     const { error } = await supabase
@@ -92,28 +91,8 @@ export function useTransactions(accountId?: string) {
 
     if (error) throw error;
 
-    // Restaurar limite do cartão se for despesa
-    if (tx?.credit_card_id && tx.type === "expense") {
-      try {
-        const physicalId = await getPhysicalCardId(tx.credit_card_id);
-        const { data: card } = await supabase
-          .from("credit_cards")
-          .select("available_limit")
-          .eq("id", physicalId)
-          .maybeSingle();
-
-        if (card) {
-          await supabase
-            .from("credit_cards")
-            .update({ available_limit: card.available_limit + tx.amount, updated_at: new Date().toISOString() })
-            .eq("id", physicalId);
-        }
-      } catch {
-        // Cartão pode ter sido deletado — limite não restaurado
-      }
-    }
-
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+    return tx;
   };
 
   return { transactions, loading, createTransaction, updateTransaction, deleteTransaction };
