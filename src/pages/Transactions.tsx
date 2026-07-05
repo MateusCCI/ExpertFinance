@@ -473,11 +473,11 @@ export default function TransactionsPage() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Valor (R$)</label>
-              <Input type="number" step="0.01" min="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="text-sm" />
+              <Input type="number" step="0.01" min="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="text-base md:text-sm" />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Descrição</label>
-              <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="text-sm" />
+              <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="text-base md:text-sm" />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
@@ -535,7 +535,7 @@ export default function TransactionsPage() {
             )}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Notas</label>
-              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="text-sm" placeholder="Opcional" />
+              <Input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="text-base md:text-sm" placeholder="Opcional" />
             </div>
           </div>
           <DialogFooter>
