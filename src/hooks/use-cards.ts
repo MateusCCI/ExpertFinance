@@ -159,5 +159,59 @@ export function useCreditCards() {
     setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: updatedLimit } : c)));
   };
 
-  return { cards, loading, createCard, updateCard, deleteCard, updateCardLimit };
+  const createVirtualCard = async (physicalId: string, lastDigits: string, name?: string) => {
+    await ensureProfile();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autenticado");
+
+    const parent = cards.find((c) => c.id === physicalId);
+    const virtualName = name || `${parent?.name || "Cartão"} (virtual)`;
+
+    const { data, error } = await supabase
+      .from("credit_cards")
+      .insert({
+        user_id: user.id,
+        account_id: parent?.account_id || "",
+        name: virtualName,
+        brand: parent?.brand || null,
+        last_digits: lastDigits.padEnd(4, "0"),
+        total_limit: 0,
+        available_limit: 0,
+        closing_day: parent?.closing_day || 1,
+        due_day: parent?.due_day || 1,
+        annual_fee: 0,
+        spend_target_for_waiver: null,
+        cashback_rate: 0,
+        cashback_balance: 0,
+        parent_card_id: physicalId,
+        is_virtual: true,
+        status: "active",
+        color: parent?.color || null,
+        sync_status: "synced",
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    setCards((prev) => [...prev, data]);
+    return data;
+  };
+
+  const createVirtualOnlyCard = async (card: Omit<CreditCard, "id" | "user_id" | "created_at" | "updated_at" | "sync_status">) => {
+    await ensureProfile();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autenticado");
+
+    const { data, error } = await supabase
+      .from("credit_cards")
+      .insert({ ...card, user_id: user.id, is_virtual: true, sync_status: "synced" })
+      .select()
+      .single();
+
+    if (error) throw error;
+    setCards((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  return { cards, loading, createCard, createVirtualCard, createVirtualOnlyCard, updateCard, deleteCard, updateCardLimit };
 }

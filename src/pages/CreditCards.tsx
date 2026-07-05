@@ -511,6 +511,11 @@ export default function CreditCardsPage() {
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
   const [showQuickExpense, setShowQuickExpense] = useState(false);
   const [showNewCard, setShowNewCard] = useState(false);
+  const [managingVirtualsFor, setManagingVirtualsFor] = useState<string | null>(null);
+  const [newVirtualDigits, setNewVirtualDigits] = useState("");
+  const [editingVirtualId, setEditingVirtualId] = useState<string | null>(null);
+  const [editingVirtualDigits, setEditingVirtualDigits] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newCardForm, setNewCardForm] = useState(() => {
     try {
       const saved = localStorage.getItem("newCardFormDraft");
@@ -536,6 +541,8 @@ export default function CreditCardsPage() {
     cards: rawCards,
     loading: cardsLoading,
     createCard,
+    createVirtualCard,
+    createVirtualOnlyCard,
     updateCard,
     deleteCard,
     updateCardLimit,
@@ -1033,15 +1040,35 @@ export default function CreditCardsPage() {
                                 <h3 className="text-sm font-medium text-foreground">{card.name}</h3>
                                 <Badge variant="secondary" className="text-[10px]">{card.brand}</Badge>
                               </div>
-                              <div className="flex items-center gap-2 mt-1.5">
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 <span className="text-xs text-muted-foreground tabular-nums font-mono tracking-wider">
                                   •••• {card.last_digits}
                                 </span>
                                 {(virtualsByParent.get(card.id) || []).map((v) => (
-                                  <span key={v.id} className="text-[10px] text-muted-foreground/60 tabular-nums font-mono tracking-wider">
+                                  <span key={v.id} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60 tabular-nums font-mono tracking-wider">
                                     | ••••{v.last_digits}
+                                    <button
+                                      onClick={() => { setEditingVirtualId(v.id); setEditingVirtualDigits(v.last_digits || ""); }}
+                                      className="text-muted-foreground hover:text-foreground transition-colors"
+                                      title="Editar virtual"
+                                    >
+                                      <Pencil className="h-2.5 w-2.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => setDeletingId(v.id)}
+                                      className="text-muted-foreground hover:text-red-500 transition-colors"
+                                      title="Excluir virtual"
+                                    >
+                                      <Trash2 className="h-2.5 w-2.5" />
+                                    </button>
                                   </span>
                                 ))}
+                                <button
+                                  onClick={() => setManagingVirtualsFor(card.id)}
+                                  className="text-[10px] text-primary hover:underline"
+                                >
+                                  + virtual
+                                </button>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1289,6 +1316,117 @@ export default function CreditCardsPage() {
                   }
                 }
                 setDeletingCardId(null);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Excluir
+            </AlertDialogAction>
+          </ADFooter>
+        </ADContent>
+      </AlertDialog>
+
+      {/* Manage virtuals dialog */}
+      <Dialog open={managingVirtualsFor !== null} onOpenChange={(open) => { if (!open) { setManagingVirtualsFor(null); setNewVirtualDigits(""); } }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Adicionar cartão virtual</DialogTitle>
+            <DialogDescription>Últimos 4 dígitos do cartão virtual</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              value={newVirtualDigits}
+              onChange={(e) => setNewVirtualDigits(e.target.value)}
+              maxLength={4}
+              placeholder="0000"
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setManagingVirtualsFor(null); setNewVirtualDigits(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={newVirtualDigits.length < 4}
+              onClick={async () => {
+                if (!managingVirtualsFor || newVirtualDigits.length < 4) return;
+                try {
+                  await createVirtualCard(managingVirtualsFor, newVirtualDigits);
+                  toast("Cartão virtual adicionado");
+                  setManagingVirtualsFor(null);
+                  setNewVirtualDigits("");
+                } catch {
+                  toast.error("Erro ao adicionar virtual");
+                }
+              }}
+            >
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit virtual dialog */}
+      <Dialog open={editingVirtualId !== null} onOpenChange={(open) => { if (!open) { setEditingVirtualId(null); setEditingVirtualDigits(""); } }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar cartão virtual</DialogTitle>
+            <DialogDescription>Altere os últimos 4 dígitos</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              value={editingVirtualDigits}
+              onChange={(e) => setEditingVirtualDigits(e.target.value)}
+              maxLength={4}
+              placeholder="0000"
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setEditingVirtualId(null); setEditingVirtualDigits(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={editingVirtualDigits.length < 4}
+              onClick={async () => {
+                if (!editingVirtualId || editingVirtualDigits.length < 4) return;
+                try {
+                  await updateCard(editingVirtualId, { last_digits: editingVirtualDigits });
+                  toast("Virtual atualizado");
+                  setEditingVirtualId(null);
+                  setEditingVirtualDigits("");
+                } catch {
+                  toast.error("Erro ao atualizar virtual");
+                }
+              }}
+            >
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete virtual confirmation */}
+      <AlertDialog open={deletingId !== null} onOpenChange={(open) => { if (!open) setDeletingId(null); }}>
+        <ADContent>
+          <ADHeader>
+            <ADTitle>Excluir cartão virtual?</ADTitle>
+            <ADDescription>Transações vinculadas a este virtual serão desvinculadas.</ADDescription>
+          </ADHeader>
+          <ADFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deletingId) return;
+                try {
+                  await deleteCard(deletingId);
+                  toast("Virtual excluído");
+                } catch {
+                  toast.error("Erro ao excluir virtual");
+                }
+                setDeletingId(null);
               }}
             >
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
