@@ -13,7 +13,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["logo.svg", "logo.png"],
+      includeAssets: ["logo.svg"],
       manifest: {
         name: "Minhas Finanças",
         short_name: "Finanças",
@@ -26,9 +26,9 @@ export default defineConfig({
         start_url: "/",
         icons: [
           {
-            src: "/logo.png",
+            src: "/logo.svg",
             sizes: "any",
-            type: "image/png",
+            type: "image/svg+xml",
             purpose: "any maskable",
           },
         ],
