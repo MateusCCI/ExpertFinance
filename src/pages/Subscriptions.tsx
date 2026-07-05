@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Navigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileHeader } from "@/components/mobile-header";
@@ -9,6 +9,7 @@ import { useRecurringTransactions, RecurringTransaction, isVariableDue } from "@
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCreditCards } from "@/hooks/use-cards";
 import { useCategories } from "@/hooks/use-categories";
+import { useTheme } from "next-themes";
 import {
   Repeat,
   Pencil,
@@ -21,6 +22,19 @@ import {
   TrendingDown,
   AlertCircle,
   Check,
+  LayoutDashboard,
+  List,
+  CreditCard,
+  Wallet,
+  Landmark,
+  Users,
+  Target,
+  BarChart3,
+  Settings,
+  LogOut,
+  PieChart,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -268,8 +282,25 @@ function NewRecurringForm({
   );
 }
 
+const navItems = [
+  { label: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
+  { label: "Transações", icon: List, id: "transactions" },
+  { label: "Cartões", icon: CreditCard, id: "cards" },
+  { label: "Contas", icon: Wallet, id: "accounts" },
+  { label: "Aluguel", icon: Landmark, id: "rent" },
+  { label: "Terceiros", icon: Users, id: "ledger" },
+  { label: "Assinaturas", icon: Repeat, id: "subscriptions" },
+  { label: "Categorias", icon: PieChart, id: "budgets" },
+  { label: "Missões", icon: Target, id: "missions" },
+  { label: "Relatórios", icon: BarChart3, id: "reports" },
+  { label: "Configurações", icon: Settings, id: "settings" },
+];
+
 export default function Subscriptions() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showQuickExpense, setShowQuickExpense] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -378,8 +409,68 @@ export default function Subscriptions() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex flex-col md:flex-row">
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar — desktop only */}
+      <aside
+        className={`${
+          sidebarOpen ? "w-56" : "w-14"
+        } border-r border-border/50 bg-background flex-col transition-all duration-200 hidden md:flex`}
+      >
+        <div className="h-14 flex items-center px-4 border-b border-border/50">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-sm font-medium tracking-tight text-foreground flex items-center gap-2"
+          >
+            <Repeat className="h-4 w-4" />
+            {sidebarOpen && <span>Finanças</span>}
+          </button>
+        </div>
+        <nav className="flex-1 py-2 px-2 space-y-1">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === "dashboard") navigate("/dashboard");
+                if (item.id === "transactions") navigate("/transactions");
+                if (item.id === "cards") navigate("/cards");
+                if (item.id === "accounts") navigate("/accounts");
+                if (item.id === "rent") navigate("/rent");
+                if (item.id === "ledger") navigate("/ledger");
+                if (item.id === "budgets") navigate("/budgets");
+                if (item.id === "missions") navigate("/missions");
+                if (item.id === "reports") navigate("/reports");
+                if (item.id === "settings") navigate("/settings");
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                item.id === "subscriptions"
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+              }`}
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              {sidebarOpen && <span>{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="p-2 border-t border-border/50 space-y-1">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+            {sidebarOpen && <span>{theme === "dark" ? "Tema claro" : "Tema escuro"}</span>}
+          </button>
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {sidebarOpen && <span>Sair</span>}
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col md:pt-0 min-h-screen">
         <main className="flex-1 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto px-4 py-6">
             <MobileHeader
@@ -524,9 +615,10 @@ export default function Subscriptions() {
             )}
           </div>
         </main>
+
+        <MobileBottomNav currentPath="/subscriptions" onQuickExpense={() => setShowQuickExpense(true)} />
       </div>
 
-      <MobileBottomNav currentPath="/subscriptions" onQuickExpense={() => setShowQuickExpense(true)} />
       <QuickExpenseDialog open={showQuickExpense} onOpenChange={setShowQuickExpense} />
 
       {/* Dialog: confirmar valor variável */}
