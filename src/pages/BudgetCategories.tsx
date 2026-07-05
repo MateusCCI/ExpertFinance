@@ -288,15 +288,18 @@ export default function BudgetCategories() {
       </aside>
 
       <div className="flex-1 flex flex-col md:pt-0 min-h-screen">
+        <MobileHeader
+          icon={Tag}
+          title="Categorias"
+          description="Gerencie suas categorias de transação"
+          onPlus={() => setShowNew(true)}
+          plusTitle="Nova categoria"
+        />
+
+        <MobileBottomNav currentPath="/budgets" onQuickExpense={() => setShowQuickExpense(true)} />
+
         <main className="flex-1 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto px-4 py-6">
-            <MobileHeader
-              icon={Tag}
-              title="Categorias"
-              description="Gerencie suas categorias de transação"
-              onPlus={() => setShowNew(true)}
-              plusTitle="Nova categoria"
-            />
 
             {/* Busca */}
             <div className="relative mb-4">
@@ -412,8 +415,6 @@ export default function BudgetCategories() {
             )}
           </div>
         </main>
-
-        <MobileBottomNav currentPath="/budgets" onQuickExpense={() => setShowQuickExpense(true)} />
       </div>
 
       <QuickExpenseDialog open={showQuickExpense} onOpenChange={setShowQuickExpense} />

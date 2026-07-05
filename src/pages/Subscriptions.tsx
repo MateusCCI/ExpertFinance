@@ -471,15 +471,18 @@ export default function Subscriptions() {
       </aside>
 
       <div className="flex-1 flex flex-col md:pt-0 min-h-screen">
+        <MobileHeader
+          icon={Repeat}
+          title="Assinaturas"
+          description="Gerencie seus gastos recorrentes"
+          onPlus={() => setShowNew(true)}
+          plusTitle="Nova assinatura"
+        />
+
+        <MobileBottomNav currentPath="/subscriptions" onQuickExpense={() => setShowQuickExpense(true)} />
+
         <main className="flex-1 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto px-4 py-6">
-            <MobileHeader
-              icon={Repeat}
-              title="Assinaturas"
-              description="Gerencie seus gastos recorrentes"
-              onPlus={() => setShowNew(true)}
-              plusTitle="Nova assinatura"
-            />
 
             {/* Alerta de variáveis pendentes */}
             {pendingVariables.length > 0 && (
@@ -615,8 +618,6 @@ export default function Subscriptions() {
             )}
           </div>
         </main>
-
-        <MobileBottomNav currentPath="/subscriptions" onQuickExpense={() => setShowQuickExpense(true)} />
       </div>
 
       <QuickExpenseDialog open={showQuickExpense} onOpenChange={setShowQuickExpense} />
