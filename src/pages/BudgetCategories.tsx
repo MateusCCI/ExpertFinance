@@ -5,23 +5,18 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { MobileHeader } from "@/components/mobile-header";
 import { toast } from "sonner";
 import { QuickExpenseDialog } from "@/components/quick-expense-dialog";
-import { useBudgets, BudgetWithSpent, getBudgetStatus } from "@/hooks/use-budgets";
-import { useCategories } from "@/hooks/use-categories";
+import { useCategories, Category } from "@/hooks/use-categories";
 import {
-  Target,
+  Tag,
   Plus,
   Pencil,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
-  CheckCircle2,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -41,87 +36,87 @@ import {
   AlertDialogTitle as ADTitle,
 } from "@/components/ui/alert-dialog";
 
-const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maiho", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const presetColors = [
+  "#ef4444", "#f97316", "#f59e0b", "#84cc16",
+  "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6",
+  "#6366f1", "#8b5cf6", "#a855f7", "#ec4899",
+];
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+const presetIcons = [
+  "🛒", "🍔", "🚗", "🏠", "💊", "🎮", "📱", "📚",
+  "✈️", "🎬", "☕", "🏋️", "🐕", "👶", "💡", "🔧",
+  "💰", "📈", "🎁", "🛒", "💳", "🏦", "🎵", "🏥",
+];
 
-function BudgetBar({ budget }: { budget: BudgetWithSpent }) {
-  const { percentage, status } = getBudgetStatus(budget, budget.spent);
-  const barColor = status === "danger" ? "bg-red-500" : status === "warning" ? "bg-amber-500" : "bg-green-500";
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-foreground">{budget.category_id ? `Categoria` : "Geral"}</span>
-        <span className="text-[10px] text-muted-foreground">{percentage}%</span>
-      </div>
-      <Progress value={Math.min(100, percentage)} className="h-2" />
-    </div>
-  );
-}
-
-function BudgetForm({
+function CategoryForm({
   onSave,
   onCancel,
   editing,
-  categories,
-  existingCategoryIds,
-  month,
-  year,
 }: {
-  onSave: (data: { category_id: string; amount: number; month: number; year: number }) => void;
+  onSave: (data: { name: string; icon: string | null; color: string | null; is_default: boolean; parent_id: string | null }) => void;
   onCancel: () => void;
-  editing?: BudgetWithSpent | null;
-  categories: { id: string; name: string; icon: string | null }[];
-  existingCategoryIds: Set<string>;
-  month: number;
-  year: number;
+  editing?: Category | null;
 }) {
-  const [categoryId, setCategoryId] = useState(editing?.category_id ?? "");
-  const [amount, setAmount] = useState(editing ? String(editing.amount) : "");
-
-  const availableCategories = editing
-    ? categories
-    : categories.filter((c) => !existingCategoryIds.has(c.id));
+  const [name, setName] = useState(editing?.name ?? "");
+  const [icon, setIcon] = useState(editing?.icon ?? "🛒");
+  const [color, setColor] = useState(editing?.color ?? "#3b82f6");
 
   const handleSave = () => {
-    const numAmount = Number(amount);
-    if (!categoryId || !numAmount) return;
-    onSave({ category_id: categoryId, amount: numAmount, month, year });
+    if (!name.trim()) return;
+    onSave({
+      name: name.trim(),
+      icon,
+      color,
+      is_default: editing?.is_default ?? false,
+      parent_id: editing?.parent_id ?? null,
+    });
   };
 
   return (
     <div className="space-y-4 py-2">
       <div className="space-y-1.5">
-        <Label>Categoria</Label>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          disabled={!!editing}
-          className="flex w-full h-8 items-center rounded-md border px-3 py-1 text-sm outline-none disabled:opacity-50"
-        >
-          <option value="">Selecione...</option>
-          {availableCategories.map((c) => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-          ))}
-        </select>
+        <Label>Nome</Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Alimentação" autoFocus />
       </div>
 
       <div className="space-y-1.5">
-        <Label>Limite mensal (R$)</Label>
-        <Input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="500.00"
-        />
+        <Label>Ícone</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {presetIcons.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => setIcon(emoji)}
+              className={`w-8 h-8 rounded-md text-lg flex items-center justify-center transition-all ${
+                icon === emoji ? "bg-primary text-primary-foreground scale-110" : "bg-secondary hover:bg-secondary/80"
+              }`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Cor</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {presetColors.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setColor(c)}
+              className={`w-7 h-7 rounded-full border-2 transition-all ${
+                color === c ? "border-foreground scale-110" : "border-transparent"
+              }`}
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </div>
       </div>
 
       <DialogFooter className="gap-2 pt-2">
         <Button variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
-        <Button size="sm" onClick={handleSave} disabled={!categoryId || !amount}>
+        <Button size="sm" onClick={handleSave} disabled={!name.trim()}>
           {editing ? "Salvar" : "Criar"}
         </Button>
       </DialogFooter>
@@ -135,39 +130,32 @@ export default function BudgetCategories() {
   const [showNew, setShowNew] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear] = useState(now.getFullYear());
+  const { categories, loading: categoriesLoading, createCategory, updateCategory, deleteCategory } = useCategories();
 
-  const { budgets, loading: budgetsLoading, createBudget, updateBudget, deleteBudget } = useBudgets(month, year);
-  const { categories } = useCategories();
+  const editing = editingId ? categories.find((c) => c.id === editingId) ?? null : null;
 
-  const editing = editingId ? budgets.find((b) => b.id === editingId) ?? null : null;
+  const filtered = useMemo(() => {
+    if (!search.trim()) return categories;
+    const q = search.toLowerCase();
+    return categories.filter((c) => c.name.toLowerCase().includes(q));
+  }, [categories, search]);
 
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; icon: string | null }>();
-    for (const c of categories) map.set(c.id, c);
+  const parentCategories = useMemo(() => filtered.filter((c) => !c.parent_id), [filtered]);
+  const childMap = useMemo(() => {
+    const map = new Map<string, Category[]>();
+    for (const c of filtered) {
+      if (c.parent_id) {
+        const list = map.get(c.parent_id) || [];
+        list.push(c);
+        map.set(c.parent_id, list);
+      }
+    }
     return map;
-  }, [categories]);
+  }, [filtered]);
 
-  const existingCategoryIds = useMemo(() => new Set(budgets.map((b) => b.category_id)), [budgets]);
-
-  const totalBudget = useMemo(() => budgets.reduce((s, b) => s + b.amount, 0), [budgets]);
-  const totalSpent = useMemo(() => budgets.reduce((s, b) => s + b.spent, 0), [budgets]);
-  const totalPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-
-  const prevMonth = () => {
-    if (month === 1) { setMonth(12); setYear(year - 1); }
-    else setMonth(month - 1);
-  };
-
-  const nextMonth = () => {
-    if (month === 12) { setMonth(1); setYear(year + 1); }
-    else setMonth(month + 1);
-  };
-
-  if (authLoading || budgetsLoading) {
+  if (authLoading || categoriesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Carregando...</div>
@@ -177,29 +165,30 @@ export default function BudgetCategories() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const handleSave = async (data: { category_id: string; amount: number; month: number; year: number }) => {
+  const handleSave = async (data: { name: string; icon: string | null; color: string | null; is_default: boolean; parent_id: string | null }) => {
     try {
       if (editingId) {
-        await updateBudget(editingId, { amount: data.amount });
-        toast("Orçamento atualizado");
+        await updateCategory(editingId, data);
+        toast("Categoria atualizada", { description: data.name });
         setEditingId(null);
       } else {
-        await createBudget(data);
-        toast("Orçamento criado");
+        await createCategory(data);
+        toast("Categoria criada", { description: data.name });
         setShowNew(false);
       }
     } catch {
-      toast.error("Erro ao salvar orçamento");
+      toast.error("Erro ao salvar categoria");
     }
   };
 
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
-      await deleteBudget(deletingId);
-      toast("Orçamento excluído");
+      const cat = categories.find((c) => c.id === deletingId);
+      await deleteCategory(deletingId);
+      toast("Categoria excluída", { description: cat?.name });
     } catch {
-      toast.error("Erro ao excluir orçamento");
+      toast.error("Erro ao excluir categoria");
     }
     setDeletingId(null);
   };
@@ -210,151 +199,120 @@ export default function BudgetCategories() {
         <main className="flex-1 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto px-4 py-6">
             <MobileHeader
-              icon={Target}
-              title="Orçamento"
-              description="Controle seus gastos por categoria"
+              icon={Tag}
+              title="Categorias"
+              description="Gerencie suas categorias de transação"
               onPlus={() => setShowNew(true)}
-              plusTitle="Novo orçamento"
+              plusTitle="Nova categoria"
             />
 
-            {/* Navegação mês */}
-            <div className="flex items-center justify-between mb-6">
-              <button onClick={prevMonth} className="p-2 rounded-md hover:bg-secondary/50">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <div className="text-center">
-                <p className="text-sm font-medium">{monthNames[month - 1]} {year}</p>
-              </div>
-              <button onClick={nextMonth} className="p-2 rounded-md hover:bg-secondary/50">
-                <ChevronRight className="h-4 w-4" />
-              </button>
+            {/* Busca */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar categoria..."
+                className="pl-9"
+              />
             </div>
 
             {/* Resumo */}
-            {budgets.length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-card p-4 mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-muted-foreground">Total do mês</span>
-                  <span className={`text-xs font-medium ${
-                    totalPercentage >= 90 ? "text-red-500" : totalPercentage >= 70 ? "text-amber-500" : "text-green-500"
-                  }`}>
-                    {totalPercentage}%
-                  </span>
-                </div>
-                <Progress value={Math.min(100, totalPercentage)} className="h-2 mb-2" />
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    Gasto: <span className="text-foreground font-medium">R$ {formatCurrency(totalSpent)}</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    Limite: <span className="text-foreground font-medium">R$ {formatCurrency(totalBudget)}</span>
-                  </span>
-                </div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-lg border border-border/60 bg-card p-3 flex-1">
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-lg font-semibold">{categories.length}</p>
               </div>
-            )}
-
-            {/* Gráfico de barras por categoria */}
-            {budgets.length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-card p-4 mb-6">
-                <h3 className="text-sm font-medium mb-3">Consumo por categoria</h3>
-                <div className="space-y-3">
-                  {budgets.map((b) => {
-                    const cat = categoryMap.get(b.category_id);
-                    const { percentage, status } = getBudgetStatus(b, b.spent);
-                    const barColor = status === "danger" ? "bg-red-500" : status === "warning" ? "bg-amber-500" : "bg-green-500";
-                    return (
-                      <div key={b.id} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-foreground truncate">{cat?.icon} {cat?.name ?? "Sem nome"}</span>
-                          <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                            R$ {formatCurrency(b.spent)} / R$ {formatCurrency(b.amount)}
-                          </span>
-                        </div>
-                        <div className="w-full h-2 rounded-full bg-secondary/50 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${barColor}`}
-                            style={{ width: `${Math.min(100, percentage)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="rounded-lg border border-border/60 bg-card p-3 flex-1">
+                <p className="text-xs text-muted-foreground">Subcategorias</p>
+                <p className="text-lg font-semibold">{categories.filter((c) => c.parent_id).length}</p>
               </div>
-            )}
-
-            {/* Lista de orçamentos */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-medium text-muted-foreground">Categorias</h2>
-              <Button size="sm" onClick={() => setShowNew(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Nova
-              </Button>
             </div>
 
-            {budgets.length === 0 ? (
+            {/* Lista */}
+            {parentCategories.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Target className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">Nenhum orçamento definido</p>
-                <p className="text-xs mt-1">Crie orçamentos para controlar gastos por categoria</p>
+                <Tag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">{search ? "Nenhuma categoria encontrada" : "Nenhuma categoria cadastrada"}</p>
+                <p className="text-xs mt-1">Crie categorias para organizar suas transações</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {budgets.map((b) => {
-                  const cat = categoryMap.get(b.category_id);
-                  const { percentage, status } = getBudgetStatus(b, b.spent);
+                {parentCategories.map((cat) => {
+                  const children = childMap.get(cat.id) || [];
                   return (
-                    <div key={b.id} className="rounded-lg border border-border/60 bg-card p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{cat?.icon ?? "📁"}</span>
-                            <h3 className="text-sm font-medium text-foreground truncate">{cat?.name ?? "Sem nome"}</h3>
-                            <Badge
-                              variant={status === "danger" ? "destructive" : "secondary"}
-                              className={`text-[10px] shrink-0 ${
-                                status === "ok" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                                status === "warning" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : ""
-                              }`}
+                    <div key={cat.id}>
+                      {/* Categoria pai */}
+                      <div className="rounded-lg border border-border/60 bg-card p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
+                              style={{ backgroundColor: cat.color ? `${cat.color}20` : undefined }}
                             >
-                              {status === "ok" ? "No limite" : status === "warning" ? "Atenção" : "Limite"}
-                            </Badge>
+                              {cat.icon ?? "📁"}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-medium text-foreground truncate">{cat.name}</h3>
+                              {children.length > 0 && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  {children.length} subcategoria(s)
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="text-xs text-muted-foreground">
-                              R$ {formatCurrency(b.spent)} / R$ {formatCurrency(b.amount)}
-                            </span>
-                            <span className={`text-xs font-medium ${
-                              status === "danger" ? "text-red-500" : status === "warning" ? "text-amber-500" : "text-green-500"
-                            }`}>
-                              {percentage}%
-                            </span>
+                          <div className="flex items-center gap-1 ml-2">
+                            {cat.is_default && (
+                              <Badge variant="secondary" className="text-[10px] shrink-0">Padrão</Badge>
+                            )}
+                            <button
+                              onClick={() => setEditingId(cat.id)}
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(cat.id)}
+                              className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                          <Progress
-                            value={Math.min(100, percentage)}
-                            className={`h-1.5 mt-2 ${
-                              status === "danger" ? "[&>div]:bg-red-500" :
-                              status === "warning" ? "[&>div]:bg-amber-500" : "[&>div]:bg-green-500"
-                            }`}
-                          />
-                        </div>
-                        <div className="flex items-center gap-1 ml-2">
-                          <button
-                            onClick={() => setEditingId(b.id)}
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-                            title="Editar"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingId(b.id)}
-                            className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
                         </div>
                       </div>
+
+                      {/* Subcategorias */}
+                      {children.map((child) => (
+                        <div key={child.id} className="rounded-lg border border-border/60 bg-card p-3 ml-6 mt-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className="w-7 h-7 rounded-md flex items-center justify-center text-sm shrink-0"
+                                style={{ backgroundColor: child.color ? `${child.color}20` : undefined }}
+                              >
+                                {child.icon ?? "📁"}
+                              </div>
+                              <span className="text-xs text-foreground truncate">{child.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setEditingId(child.id)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => setDeletingId(child.id)}
+                                className="p-1 rounded-md text-muted-foreground/50 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   );
                 })}
@@ -367,21 +325,15 @@ export default function BudgetCategories() {
       <MobileBottomNav currentPath="/budgets" onQuickExpense={() => setShowQuickExpense(true)} />
       <QuickExpenseDialog open={showQuickExpense} onOpenChange={setShowQuickExpense} />
 
-      {/* Dialog: nova / editar orçamento */}
+      {/* Dialog: nova / editar */}
       <Dialog open={showNew || editingId !== null} onOpenChange={(open) => { if (!open) { setShowNew(false); setEditingId(null); } }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar orçamento" : "Novo orçamento"}</DialogTitle>
-            <DialogDescription>
-              {editing ? "Altere o limite da categoria" : `Defina o limite para ${monthNames[month - 1]}`}
-            </DialogDescription>
+            <DialogTitle>{editing ? "Editar categoria" : "Nova categoria"}</DialogTitle>
+            <DialogDescription>{editing ? "Altere os dados da categoria" : "Crie uma nova categoria"}</DialogDescription>
           </DialogHeader>
-          <BudgetForm
+          <CategoryForm
             editing={editing}
-            categories={categories}
-            existingCategoryIds={existingCategoryIds}
-            month={month}
-            year={year}
             onSave={handleSave}
             onCancel={() => { setShowNew(false); setEditingId(null); }}
           />
@@ -392,8 +344,8 @@ export default function BudgetCategories() {
       <AlertDialog open={deletingId !== null} onOpenChange={(open) => { if (!open) setDeletingId(null); }}>
         <ADContent>
           <ADHeader>
-            <ADTitle>Excluir orçamento?</ADTitle>
-            <ADDescription>Esta ação não pode ser desfeita.</ADDescription>
+            <ADTitle>Excluir categoria?</ADTitle>
+            <ADDescription>Transações usando esta categoria não serão excluídas.</ADDescription>
           </ADHeader>
           <ADFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

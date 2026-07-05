@@ -30,7 +30,7 @@ const defaultNavItems = [
 const defaultExtraItems = [
   { label: "Terceiros", icon: Users, path: "/ledger" },
   { label: "Assinaturas", icon: Repeat, path: "/subscriptions" },
-  { label: "Orçamentos", icon: PieChart, path: "/budgets" },
+  { label: "Categorias", icon: PieChart, path: "/budgets" },
   { label: "Missões", icon: Target, path: "/missions" },
   { label: "Relatórios", icon: BarChart3, path: "/reports" },
   { label: "Configurações", icon: Settings, path: "/settings" },
