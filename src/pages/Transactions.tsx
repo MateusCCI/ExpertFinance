@@ -443,6 +443,7 @@ export default function TransactionsPage() {
                 if (id) {
                   try {
                     const tx = await deleteTransaction(id);
+                    console.log("[deleteTx]", { credit_card_id: tx?.credit_card_id, type: tx?.type, amount: tx?.amount });
                     if (tx?.credit_card_id && tx.type === "expense") {
                       await updateCardLimit(tx.credit_card_id, tx.amount);
                     }
