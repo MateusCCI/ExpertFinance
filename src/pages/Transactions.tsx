@@ -293,7 +293,7 @@ export default function TransactionsPage() {
                 placeholder="Buscar por descrição ou categoria..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 text-sm"
+                className="pl-9 text-base md:text-sm"
               />
             </div>
 
