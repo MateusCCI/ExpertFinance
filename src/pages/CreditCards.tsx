@@ -352,7 +352,7 @@ function NewPurchaseForm({
       const selectedCard = physicalCards.find((c) => c.id === cardId);
 
       await createTransaction({
-        account_id: null,
+        account_id: "",
         credit_card_id: cardId,
         type: "expense" as const,
         amount: numAmount,
