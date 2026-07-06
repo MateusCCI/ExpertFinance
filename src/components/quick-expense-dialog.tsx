@@ -102,9 +102,7 @@ export function QuickExpenseDialog({ open, onOpenChange }: QuickExpenseDialogPro
       amount: numAmount,
       description,
       date: new Date(date + "T12:00:00").toISOString(),
-      account_id: paymentMethod === "credit"
-        ? (selectedCard?.account_id || accounts[0]?.id || "")
-        : cardId,
+      account_id: paymentMethod === "credit" ? null : cardId,
       credit_card_id: paymentMethod === "credit" ? cardId : null,
       category_id: null as string | null,
       installment_count: numInstallments > 1 ? numInstallments : null,

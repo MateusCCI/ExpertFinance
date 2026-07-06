@@ -299,7 +299,7 @@ export default function LedgerPage() {
 
         await createTxn({
           credit_card_id: txnCardId,
-          account_id: selectedCard?.account_id ?? "",
+          account_id: txnCardId ? null : selectedCard?.account_id ?? "",
           category_id: null,
           type: "expense",
           amount,

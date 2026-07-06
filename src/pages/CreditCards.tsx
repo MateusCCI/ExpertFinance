@@ -350,10 +350,9 @@ function NewPurchaseForm({
       const numAmount = parseFloat(amount);
       const numInstallments = parseInt(installments) || 1;
       const selectedCard = physicalCards.find((c) => c.id === cardId);
-      const accountId = accounts[0]?.id ?? "";
 
       await createTransaction({
-        account_id: accountId,
+        account_id: null,
         credit_card_id: cardId,
         type: "expense" as const,
         amount: numAmount,
