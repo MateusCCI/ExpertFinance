@@ -378,6 +378,9 @@ export default function TransactionsPage() {
   const deleteConfirmRef = useRef(deleteConfirmId);
   useEffect(() => { deleteConfirmRef.current = deleteConfirmId; }, [deleteConfirmId]);
 
+  // ── Hook de agrupamento (deve ficar antes dos returns) ──
+  const { groupedItems, expandedGroups, toggleGroup } = useInstallmentGroups(transactions);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
@@ -424,9 +427,6 @@ export default function TransactionsPage() {
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const totalTransfer = transactions.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
-
-  // ── Agrupar parcelas ──
-  const { groupedItems, expandedGroups, toggleGroup } = useInstallmentGroups(filteredTransactions);
 
   return (
     <div className="min-h-screen bg-background flex">
