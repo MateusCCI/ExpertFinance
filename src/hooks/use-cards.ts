@@ -129,18 +129,6 @@ export function useCreditCards() {
 
   const updateCardLimit = async (id: string, delta: number) => {
     const physicalId = await getPhysicalCardId(id);
-    console.log("[updateCardLimit]", { id, physicalId, delta });
-
-    const { data: newLimit, error: rpcError } = await supabase
-      .rpc("update_card_limit_atomic", { p_card_id: physicalId, p_delta: delta });
-
-    if (!rpcError && newLimit !== null) {
-      console.log("[updateCardLimit] RPC OK, newLimit:", newLimit);
-      setCards((prev) => prev.map((c) => (c.id === physicalId ? { ...c, available_limit: newLimit } : c)));
-      return;
-    }
-
-    console.log("[updateCardLimit] RPC failed, using fallback:", rpcError?.message);
 
     const { data: current, error: fetchError } = await supabase
       .from("credit_cards")
@@ -152,7 +140,6 @@ export function useCreditCards() {
 
     const currentLimit = current.available_limit ?? 0;
     const updatedLimit = Math.max(0, Math.min(current.total_limit, currentLimit + delta));
-    console.log("[updateCardLimit] fallback:", { currentLimit, updatedLimit, total: current.total_limit });
 
     const { error } = await supabase
       .from("credit_cards")
