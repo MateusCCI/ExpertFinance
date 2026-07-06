@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccounts } from "@/hooks/use-accounts";
-import { useTransactions } from "@/hooks/use-transactions";
+import { useTransactions, Transaction } from "@/hooks/use-transactions";
 import { useCategories } from "@/hooks/use-categories";
 import { useCreditCards } from "@/hooks/use-cards";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -69,6 +69,9 @@ import {
   TrendingUp,
   TrendingDown,
   Trash2,
+  ChevronDown,
+  ChevronUp,
+  Layers,
 } from "lucide-react";
 
 const navItems = [
@@ -95,11 +98,258 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 }
 
+function SingleTransactionRow({ tx, index, categories, accounts, cards, onEdit, onDelete }: {
+  tx: Transaction;
+  index: number;
+  categories: { id: string; name: string; color: string | null }[];
+  accounts: { id: string; name: string }[];
+  cards: { id: string; name: string }[];
+  onEdit: (tx: Transaction) => void;
+  onDelete: (id: string) => void;
+}) {
+  const getAccountName = (id: string) => accounts.find((a) => a.id === id)?.name ?? "—";
+  const getCategoryName = (id: string | null) => id ? categories.find((c) => c.id === id)?.name ?? "—" : "—";
+  const getCardName = (id: string | null) => id ? cards.find((c) => c.id === id)?.name ?? null : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: 0.02 * index }}
+      className="p-4 md:p-5 hover:bg-secondary/20 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+            tx.type === "income" ? "bg-green-50 dark:bg-green-950/30"
+              : tx.type === "expense" ? "bg-red-50 dark:bg-red-950/30"
+                : "bg-blue-50 dark:bg-blue-950/30"
+          }`}>
+            {tx.type === "income" ? <ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />
+              : tx.type === "expense" ? <ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />
+                : <ArrowRightLeft className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{tx.description}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-muted-foreground">{formatDate(tx.date)}</span>
+              <span className="text-[10px] text-muted-foreground">•</span>
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                {getCategoryIcon(tx.category_id, categories)}
+                {getCategoryName(tx.category_id)}
+              </div>
+              <span className="text-[10px] text-muted-foreground">•</span>
+              <span className="text-[10px] text-muted-foreground">{getAccountName(tx.account_id)}</span>
+              {getCardName(tx.credit_card_id) && (
+                <>
+                  <span className="text-[10px] text-muted-foreground">•</span>
+                  <span className="text-[10px] text-muted-foreground">{getCardName(tx.credit_card_id)}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={() => onEdit(tx)} className="p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-secondary/50 transition-colors" title="Editar">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={() => onDelete(tx.id)} className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors" title="Excluir">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+          <span className={`text-sm font-medium tabular-nums ${
+            tx.type === "income" ? "text-green-600 dark:text-green-400"
+              : tx.type === "expense" ? "text-red-600 dark:text-red-400"
+                : "text-muted-foreground"
+          }`}>
+            {tx.type === "income" ? "+" : tx.type === "expense" ? "−" : ""}R$ {formatCurrency(tx.amount)}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function InstallmentGroupCard({ group, isExpanded, onToggle, index, categories, accounts, cards, onEdit, onDelete }: {
+  group: any;
+  isExpanded: boolean;
+  onToggle: () => void;
+  index: number;
+  categories: { id: string; name: string; color: string | null }[];
+  accounts: { id: string; name: string }[];
+  cards: { id: string; name: string }[];
+  onEdit: (tx: any) => void;
+  onDelete: (id: string) => void;
+}) {
+  const progress = group.installmentCount > 0 ? (group.paidCount / group.installmentCount) * 100 : 0;
+  const remaining = (group.installmentCount - group.paidCount) * group.amount;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: 0.02 * index }}
+      className="hover:bg-secondary/20 transition-colors"
+    >
+      <button onClick={onToggle} className="w-full p-4 md:p-5 text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+              group.type === "income" ? "bg-green-50 dark:bg-green-950/30"
+                : group.type === "expense" ? "bg-red-50 dark:bg-red-950/30"
+                  : "bg-blue-50 dark:bg-blue-950/30"
+            }`}>
+              <Layers className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground truncate">{group.description}</p>
+                <Badge variant="secondary" className="text-[10px] shrink-0">
+                  {group.paidCount}/{group.installmentCount}x
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-muted-foreground">R$ {formatCurrency(group.amount)}/mês</span>
+                <span className="text-[10px] text-muted-foreground">•</span>
+                <span className="text-[10px] text-muted-foreground">R$ {formatCurrency(remaining)} restante</span>
+              </div>
+              <div className="mt-2 w-full max-w-[200px]">
+                <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, progress)}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-sm font-medium tabular-nums ${
+              group.type === "income" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+            }`}>
+              {group.type === "income" ? "+" : "−"}R$ {formatCurrency(group.totalAmount)}
+            </span>
+            {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </div>
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-border/30 divide-y divide-border/20">
+              {group.installments.map((inst: any) => (
+                <div key={inst.id} className="px-4 md:px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-muted-foreground w-6 text-center">
+                      {inst.installment_number}/{group.installmentCount}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{formatDate(inst.date)}</span>
+                    <Badge
+                      variant={inst.status === "paid" ? "secondary" : inst.status === "current" ? "default" : "outline"}
+                      className="text-[10px]"
+                    >
+                      {inst.status === "paid" ? "Pago" : inst.status === "current" ? "Atual" : "Futuro"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium tabular-nums">R$ {formatCurrency(inst.amount)}</span>
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(inst); }} className="p-1 rounded text-muted-foreground/50 hover:text-foreground">
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(inst.id); }} className="p-1 rounded text-muted-foreground/50 hover:text-red-500">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${day}/${month}`;
+}
+
+function useInstallmentGroups(transactions: Transaction[]) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, Transaction[]>();
+    const singles: Transaction[] = [];
+
+    transactions.forEach((tx) => {
+      if (tx.installment_group_id && tx.installment_count && tx.installment_count > 1) {
+        const group = groups.get(tx.installment_group_id) || [];
+        group.push(tx);
+        groups.set(tx.installment_group_id, group);
+      } else {
+        singles.push(tx);
+      }
+    });
+
+    const groupCards = Array.from(groups.entries()).map(([groupId, txs]) => {
+      const sorted = [...txs].sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0));
+      const first = sorted[0];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const installments = sorted.map((tx) => {
+        const txDate = new Date(tx.date);
+        let status: "paid" | "current" | "future" = "future";
+        if (txDate < today) status = "paid";
+        else if (txDate.getMonth() === today.getMonth() && txDate.getFullYear() === today.getFullYear()) status = "current";
+        return { ...tx, status };
+      });
+
+      const paidCount = installments.filter((i) => i.status === "paid").length;
+
+      return {
+        id: groupId,
+        type: first.type,
+        description: first.description,
+        amount: first.amount,
+        installmentCount: first.installment_count!,
+        installments,
+        paidCount,
+        totalAmount: first.amount * first.installment_count!,
+        account_id: first.account_id,
+        credit_card_id: first.credit_card_id,
+        category_id: first.category_id,
+      };
+    });
+
+    const allItems: Array<{ type: "single" | "group"; data: any }> = [
+      ...groupCards.map((g) => ({ type: "group" as const, data: g })),
+      ...singles.map((s) => ({ type: "single" as const, data: s })),
+    ];
+
+    return allItems.sort((a, b) => {
+      const dateA = a.type === "group" ? a.data.installments[0]?.date : a.data.date;
+      const dateB = b.type === "group" ? b.data.installments[0]?.date : b.data.date;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  }, [transactions]);
+
+  const toggleGroup = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  return { groupedItems, expandedGroups: expanded, toggleGroup };
 }
 
 export default function TransactionsPage() {
@@ -174,6 +424,9 @@ export default function TransactionsPage() {
   const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
   const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
   const totalTransfer = transactions.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
+
+  // ── Agrupar parcelas ──
+  const { groupedItems, expandedGroups, toggleGroup } = useInstallmentGroups(filteredTransactions);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -314,7 +567,7 @@ export default function TransactionsPage() {
             transition={{ duration: 0.4, delay: 0.15 }}
             className="rounded-lg border border-border/60 bg-card"
           >
-            {filteredTransactions.length === 0 ? (
+            {groupedItems.length === 0 ? (
               <div className="p-10 text-center">
                 <List className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
                 <p className="text-sm text-muted-foreground">Nenhuma transação encontrada</p>
@@ -330,87 +583,50 @@ export default function TransactionsPage() {
               </div>
             ) : (
               <div className="divide-y divide-border/30">
-                {filteredTransactions.map((tx, i) => (
-                  <motion.div
-                    key={tx.id}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: 0.02 * i }}
-                    className="p-4 md:p-5 hover:bg-secondary/20 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                          tx.type === "income"
-                            ? "bg-green-50 dark:bg-green-950/30"
-                            : tx.type === "expense"
-                              ? "bg-red-50 dark:bg-red-950/30"
-                              : "bg-blue-50 dark:bg-blue-950/30"
-                        }`}>
-                          {tx.type === "income" ? (
-                            <ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          ) : tx.type === "expense" ? (
-                            <ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          ) : (
-                            <ArrowRightLeft className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{tx.description}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">{formatDate(tx.date)}</span>
-                            <span className="text-[10px] text-muted-foreground">•</span>
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                              {getCategoryIcon(tx.category_id, categories)}
-                              {getCategoryName(tx.category_id)}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground">•</span>
-                            <span className="text-[10px] text-muted-foreground">{getAccountName(tx.account_id)}</span>
-                            {getCardName(tx.credit_card_id) && (
-                              <>
-                                <span className="text-[10px] text-muted-foreground">•</span>
-                                <span className="text-[10px] text-muted-foreground">{getCardName(tx.credit_card_id)}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={() => {
-                            setEditingTx(tx.id);
-                            setEditType(tx.type as "expense" | "income");
-                            setEditAmount(String(tx.amount));
-                            setEditDescription(tx.description);
-                            setEditCategoryId(tx.category_id || "");
-                            setEditAccountId(tx.account_id);
-                            setEditCardId(tx.credit_card_id || "");
-                            setEditNotes(tx.notes || "");
-                          }}
-                          className="p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-secondary/50 transition-colors"
-                          title="Editar transação"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(tx.id)}
-                          className="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                          title="Excluir transação"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                        <span className={`text-sm font-medium tabular-nums ${
-                          tx.type === "income"
-                            ? "text-green-600 dark:text-green-400"
-                            : tx.type === "expense"
-                              ? "text-red-600 dark:text-red-400"
-                              : "text-muted-foreground"
-                        }`}>
-                          {tx.type === "income" ? "+" : tx.type === "expense" ? "−" : ""}R$ {formatCurrency(tx.amount)}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
+                {groupedItems.map((item, i) => (
+                  item.type === "group" ? (
+                    <InstallmentGroupCard
+                      key={item.data.id}
+                      group={item.data}
+                      isExpanded={expandedGroups.has(item.data.id)}
+                      onToggle={() => toggleGroup(item.data.id)}
+                      index={i}
+                      categories={categories}
+                      accounts={accounts}
+                      cards={cards}
+                      onEdit={(tx) => {
+                        setEditingTx(tx.id);
+                        setEditType(tx.type as "expense" | "income");
+                        setEditAmount(String(tx.amount));
+                        setEditDescription(tx.description);
+                        setEditCategoryId(tx.category_id || "");
+                        setEditAccountId(tx.account_id);
+                        setEditCardId(tx.credit_card_id || "");
+                        setEditNotes(tx.notes || "");
+                      }}
+                      onDelete={(id) => setDeleteConfirmId(id)}
+                    />
+                  ) : (
+                    <SingleTransactionRow
+                      key={item.data.id}
+                      tx={item.data}
+                      index={i}
+                      categories={categories}
+                      accounts={accounts}
+                      cards={cards}
+                      onEdit={(tx) => {
+                        setEditingTx(tx.id);
+                        setEditType(tx.type as "expense" | "income");
+                        setEditAmount(String(tx.amount));
+                        setEditDescription(tx.description);
+                        setEditCategoryId(tx.category_id || "");
+                        setEditAccountId(tx.account_id);
+                        setEditCardId(tx.credit_card_id || "");
+                        setEditNotes(tx.notes || "");
+                      }}
+                      onDelete={(id) => setDeleteConfirmId(id)}
+                    />
+                  )
                 ))}
               </div>
             )}
