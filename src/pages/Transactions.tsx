@@ -280,14 +280,95 @@ function formatDate(dateStr: string) {
   return `${day}/${month}`;
 }
 
-function useInstallmentGroups(transactions: Transaction[]) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+export default function TransactionsPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+  const [showQuickExpense, setShowQuickExpense] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
+  const { categories, createCategory } = useCategories();
+  const { accounts } = useAccounts();
+  const { cards, updateCardLimit } = useCreditCards();
+  const { transactions, loading: transactionsLoading, createTransaction, updateTransaction, deleteTransaction } = useTransactions();
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editingTx, setEditingTx] = useState<string | null>(null);
+  const [editType, setEditType] = useState<"expense" | "income">("expense");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editAccountId, setEditAccountId] = useState("");
+  const [editCardId, setEditCardId] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const deleteConfirmRef = useRef(deleteConfirmId);
+  useEffect(() => { deleteConfirmRef.current = deleteConfirmId; }, [deleteConfirmId]);
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/auth");
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  if (isLoading || transactionsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+          <span className="text-sm text-muted-foreground">Carregando...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const getAccountName = (accountId: string) =>
+    accounts.find((a) => a.id === accountId)?.name ?? "—";
+  const getCategoryName = (categoryId: string | null) =>
+    categoryId ? categories.find((c) => c.id === categoryId)?.name ?? "—" : "—";
+  const getCardName = (cardId: string | null) =>
+    cardId ? cards.find((c) => c.id === cardId)?.name ?? null : null;
+
+  const filteredTransactions = transactions.filter((t) => {
+    const accountName = getAccountName(t.account_id).toLowerCase();
+    const categoryName = getCategoryName(t.category_id).toLowerCase();
+    const matchesSearch =
+      t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      categoryName.includes(searchQuery.toLowerCase()) ||
+      accountName.includes(searchQuery.toLowerCase());
+    const matchesTab =
+      activeTab === "all" ||
+      (activeTab === "income" && t.type === "income") ||
+      (activeTab === "expense" && t.type === "expense") ||
+      (activeTab === "transfer" && t.type === "transfer");
+    return matchesSearch && matchesTab;
+  });
+
+  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const totalTransfer = transactions.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
+
+  // ── Agrupar parcelas ──
   const groupedItems = useMemo(() => {
     const groups = new Map<string, Transaction[]>();
     const singles: Transaction[] = [];
 
-    transactions.forEach((tx) => {
+    filteredTransactions.forEach((tx) => {
       if (tx.installment_group_id && tx.installment_count && tx.installment_count > 1) {
         const group = groups.get(tx.installment_group_id) || [];
         group.push(tx);
@@ -338,95 +419,7 @@ function useInstallmentGroups(transactions: Transaction[]) {
       const dateB = b.type === "group" ? b.data.installments[0]?.date : b.data.date;
       return new Date(dateB).getTime() - new Date(dateA).getTime();
     });
-  }, [transactions]);
-
-  const toggleGroup = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  return { groupedItems, expandedGroups: expanded, toggleGroup };
-}
-
-export default function TransactionsPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated, isLoading, signOut } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-  const [showQuickExpense, setShowQuickExpense] = useState(false);
-
-  const { categories, createCategory } = useCategories();
-  const { accounts } = useAccounts();
-  const { cards, updateCardLimit } = useCreditCards();
-  const { transactions, loading: transactionsLoading, createTransaction, updateTransaction, deleteTransaction } = useTransactions();
-
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [editingTx, setEditingTx] = useState<string | null>(null);
-  const [editType, setEditType] = useState<"expense" | "income">("expense");
-  const [editAmount, setEditAmount] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editCategoryId, setEditCategoryId] = useState("");
-  const [editAccountId, setEditAccountId] = useState("");
-  const [editCardId, setEditCardId] = useState("");
-  const [editNotes, setEditNotes] = useState("");
-  const deleteConfirmRef = useRef(deleteConfirmId);
-  useEffect(() => { deleteConfirmRef.current = deleteConfirmId; }, [deleteConfirmId]);
-
-  // ── Hook de agrupamento (deve ficar antes dos returns) ──
-  const { groupedItems, expandedGroups, toggleGroup } = useInstallmentGroups(transactions);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
-    }
-  }, [isLoading, isAuthenticated, navigate]);
-
-  if (isLoading || transactionsLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
-          <span className="text-sm text-muted-foreground">Carregando...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  const getAccountName = (accountId: string) =>
-    accounts.find((a) => a.id === accountId)?.name ?? "—";
-  const getCategoryName = (categoryId: string | null) =>
-    categoryId ? categories.find((c) => c.id === categoryId)?.name ?? "—" : "—";
-  const getCardName = (cardId: string | null) =>
-    cardId ? cards.find((c) => c.id === cardId)?.name ?? null : null;
-
-  const filteredTransactions = transactions.filter((t) => {
-    const accountName = getAccountName(t.account_id).toLowerCase();
-    const categoryName = getCategoryName(t.category_id).toLowerCase();
-    const matchesSearch =
-      t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      categoryName.includes(searchQuery.toLowerCase()) ||
-      accountName.includes(searchQuery.toLowerCase());
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "income" && t.type === "income") ||
-      (activeTab === "expense" && t.type === "expense") ||
-      (activeTab === "transfer" && t.type === "transfer");
-    return matchesSearch && matchesTab;
-  });
-
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-  const totalTransfer = transactions.filter((t) => t.type === "transfer").reduce((s, t) => s + t.amount, 0);
+  }, [filteredTransactions]);
 
   return (
     <div className="min-h-screen bg-background flex">
