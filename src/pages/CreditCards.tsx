@@ -1033,11 +1033,11 @@ export default function CreditCardsPage() {
                         className="rounded-lg border border-border/60 bg-card overflow-hidden"
                       >
                         <div className="h-1.5 w-full" style={{ backgroundColor: card.color || "#3b82f6" }} />
-                        <div className="p-4 md:p-5">
+                        <div className="p-4 md:p-5 overflow-hidden min-w-0">
                           <div className="flex items-start justify-between mb-3 md:mb-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-medium text-foreground">{card.name}</h3>
+                                <h3 className="text-sm font-medium text-foreground truncate">{card.name}</h3>
                                 <Badge variant="secondary" className="text-[10px]">{card.brand}</Badge>
                               </div>
                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -1093,9 +1093,9 @@ export default function CreditCardsPage() {
                           </div>
 
                           <div className="mb-3">
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                              <span className="text-muted-foreground">Limite</span>
-                              <span className="text-foreground tabular-nums">
+                            <div className="flex items-center justify-between text-xs mb-1.5 min-w-0">
+                              <span className="text-muted-foreground shrink-0">Limite</span>
+                              <span className="text-foreground tabular-nums truncate ml-2">
                                 R$ {formatCurrency(limitUsed)} / R$ {formatCurrency(card.total_limit)}
                               </span>
                             </div>
@@ -1115,18 +1115,18 @@ export default function CreditCardsPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3 pt-3 border-t border-border/30">
+                          <div className="flex items-center gap-3 pt-3 border-t border-border/30 flex-wrap">
                             {card.cashback_rate != null && card.cashback_rate > 0 && (
-                              <div className="flex items-center gap-1.5">
-                                <PiggyBank className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <PiggyBank className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-xs text-muted-foreground truncate">
                                   {(card.cashback_rate * 100).toFixed(1)}% • R$ {formatCurrency(card.cashback_balance)}
                                 </span>
                               </div>
                             )}
                             {card.annual_fee != null && card.annual_fee > 0 && card.spend_target_for_waiver ? (
-                              <div className="flex items-center gap-1.5">
-                                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 <span className="text-xs text-muted-foreground">
                                   Meta: {Math.min(100, Math.round((limitUsed / card.spend_target_for_waiver) * 100))}%
                                 </span>

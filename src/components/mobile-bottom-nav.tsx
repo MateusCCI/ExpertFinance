@@ -153,32 +153,34 @@ export function MobileBottomNav({ currentPath, onQuickExpense }: MobileBottomNav
       )}
 
       {/* Bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-sm border-t border-border/50 z-50 flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-sm border-t border-border/50 z-50 flex items-stretch px-2 pb-[env(safe-area-inset-bottom)]">
         {!editing ? (
           <>
             {navItems.slice(0, 3).map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-md transition-colors min-w-0 ${currentPath === item.path ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors ${currentPath === item.path ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <item.icon className="h-5 w-5" />
                 <span className="text-[9px] font-medium truncate">{item.label}</span>
               </button>
             ))}
 
-            <button
-              onClick={onQuickExpense}
-              className="relative -mt-5 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform active:scale-90 hover:scale-105 shadow-lg shadow-primary/20"
-            >
-              <Plus className="h-6 w-6" />
-            </button>
+            <div className="flex-1 flex items-center justify-center">
+              <button
+                onClick={onQuickExpense}
+                className="relative -mt-5 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform active:scale-90 hover:scale-105 shadow-lg shadow-primary/20"
+              >
+                <Plus className="h-6 w-6" />
+              </button>
+            </div>
 
             {navItems.slice(3, 5).map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-md transition-colors min-w-0 ${currentPath === item.path ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors ${currentPath === item.path ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <item.icon className="h-5 w-5" />
                 <span className="text-[9px] font-medium truncate">{item.label}</span>
@@ -187,7 +189,7 @@ export function MobileBottomNav({ currentPath, onQuickExpense }: MobileBottomNav
 
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-md transition-colors min-w-0 ${menuOpen ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors ${menuOpen ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               <span className="text-[9px] font-medium truncate">Mais</span>
@@ -200,12 +202,12 @@ export function MobileBottomNav({ currentPath, onQuickExpense }: MobileBottomNav
               onClick={onQuickExpense}
               className="relative -mt-5 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform active:scale-90 hover:scale-105 shadow-lg shadow-primary/20"
             >
-              <Plus className="h-6 w-6" />
+              <Plus className="h-6 h-6" />
             </button>
             <div className="flex-1" />
             <button
               onClick={() => setEditing(false)}
-              className="flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-md transition-colors min-w-0 text-foreground"
+              className="flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors min-w-0 text-foreground"
             >
               <X className="h-5 w-5" />
               <span className="text-[9px] font-medium truncate">Fechar</span>

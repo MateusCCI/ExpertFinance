@@ -20,20 +20,28 @@ export function useAlerts() {
   const unreadCount = alerts.filter((a) => !a.is_read).length;
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data, error } = await supabase
-        .from("alerts")
-        .select("*")
-        .order("created_at", { ascending: false });
+    let cancelled = false;
 
-      if (error) {
-        console.error("Error fetching alerts:", error);
+    const fetch = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("alerts")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) console.error("Error fetching alerts:", error);
+        if (!cancelled) {
+          setAlerts(data || []);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error fetching alerts:", err);
+        if (!cancelled) setLoading(false);
       }
-      setAlerts(data || []);
-      setLoading(false);
     };
 
     fetch();
+    return () => { cancelled = true; };
   }, []);
 
   const markAsRead = async (id: string) => {

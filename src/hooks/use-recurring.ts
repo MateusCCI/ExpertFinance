@@ -87,19 +87,29 @@ export function useRecurringTransactions() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
-      await ensureProfile();
-      const { data, error } = await supabase
-        .from("recurring_transactions")
-        .select("*")
-        .order("day_of_month");
+    let cancelled = false;
 
-      if (error) console.error("Error fetching recurring transactions:", error);
-      setRecurring((data as RecurringTransaction[]) || []);
-      setLoading(false);
+    const fetch = async () => {
+      try {
+        await ensureProfile();
+        const { data, error } = await supabase
+          .from("recurring_transactions")
+          .select("*")
+          .order("day_of_month");
+
+        if (error) console.error("Error fetching recurring transactions:", error);
+        if (!cancelled) {
+          setRecurring((data as RecurringTransaction[]) || []);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error fetching recurring:", err);
+        if (!cancelled) setLoading(false);
+      }
     };
 
     fetch();
+    return () => { cancelled = true; };
   }, []);
 
   const createRecurring = async (data: RecurringInsert) => {
